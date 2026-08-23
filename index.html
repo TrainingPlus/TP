@@ -136,16 +136,29 @@
     </main>
 
     <!-- Account Details Modal -->
-    <div id="account-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
-            <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
-            <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
-            <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
-            <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
-            <p style="margin-bottom: 16px;"><strong>Role:</strong> <span id="modal-role">--</span></p>
+<div id="account-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 400px; padding: 24px;">
+        <span class="close-btn" onclick="closeAccountModal()">&times;</span>
+        <h3 style="color: #2b6cb0; margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
+        <p><strong>User ID:</strong> <span id="modal-userid">--</span></p>
+        <p><strong>Username:</strong> <span id="modal-username">--</span></p>
+        <p><strong>Email:</strong> <span id="modal-email">--</span></p>
+        <p style="margin-bottom: 16px;"><strong>Role:</strong> <span id="modal-role">--</span></p>
+
+        <!-- Change Password Section (Hidden for Google Employee logins) -->
+        <div id="change-password-section" style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px; text-align: left;">
+            <h4 style="color: #2d3748; margin-bottom: 8px; font-size: 0.95rem;">Change Password</h4>
+            
+            <label style="font-size: 0.8rem; color: #4a5568;">New Password:</label>
+            <input type="password" id="new-password-input" placeholder="Enter new password" style="width: 100%; padding: 8px; margin: 4px 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+            
+            <label style="font-size: 0.8rem; color: #4a5568;">Confirm New Password:</label>
+            <input type="password" id="confirm-password-input" placeholder="Confirm new password" style="width: 100%; padding: 8px; margin: 4px 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+
+            <button type="button" class="primary-btn" onclick="changeUserPassword()" style="width: 100%; padding: 8px; font-size: 0.85rem;">Update Password</button>
         </div>
     </div>
+</div>
 
     <!-- Group Chat Floating Widget -->
     <div id="chat-widget">
