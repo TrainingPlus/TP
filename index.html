@@ -1,828 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Training Plus Institute - Integrated System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Plus Institute</title>
+    <link rel="stylesheet" href="style.css">
 
-  <!-- STYLESHEET (CSS) -->
-  <style>
-    :root {
-      --bg-color: #f2f7f5;
-      --card-bg: #ffffff;
-      --text-primary: #2d3748;
-      --text-muted: #718096;
-      --border-color: #e2e8f0;
-      --accent-mint: #a8e6cf;
-      --accent-mint-dark: #81c784;
-      --accent-slate-blue: #709fb0;
-      --danger-red: #e57373;
-      --valid-green: #38a169;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-primary);
-      padding-bottom: 70px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Top Navigation */
-    .top-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: var(--accent-slate-blue);
-      padding: 12px 24px;
-      color: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .nav-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .brand-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .search-container input {
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: none;
-      outline: none;
-      font-size: 0.85rem;
-      width: 220px;
-    }
-
-    .nav-controls {
-      display: flex;
-      gap: 8px;
-    }
-
-    .nav-btn {
-      background-color: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 7px 14px;
-      border-radius: 18px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background-color 0.2s;
-    }
-
-    .nav-btn:hover, .nav-btn.active {
-      background-color: rgba(255, 255, 255, 0.35);
-    }
-
-    .logout-btn:hover {
-      background-color: var(--danger-red);
-    }
-
-    /* Layout & Main Card View */
-    .main-wrapper {
-      flex: 1;
-      width: 100%;
-      padding: 0 20px;
-    }
-
-    .card-view {
-      max-width: 850px;
-      margin: 30px auto;
-      background: var(--card-bg);
-      padding: 28px;
-      border-radius: 16px;
-      border: 1px solid #e8f0ec;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
-    }
-
-    .dashboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .hidden { display: none !important; }
-
-    /* Navigation Tabs */
-    .tab-header {
-      display: flex;
-      gap: 12px;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 8px;
-      margin-bottom: 20px;
-      overflow-x: auto;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 6px 12px;
-      white-space: nowrap;
-      transition: color 0.2s, border-color 0.2s;
-    }
-
-    .tab-btn.active {
-      color: var(--accent-slate-blue);
-      border-bottom: 3px solid var(--accent-slate-blue);
-    }
-
-    .tab-btn.placeholder {
-      border: 1px dashed var(--border-color);
-      border-radius: 6px;
-    }
-
-    .tab-btn.placeholder:hover {
-      border-color: var(--accent-slate-blue);
-      color: var(--accent-slate-blue);
-    }
-
-    /* Form Controls & Buttons */
-    .standard-form {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .grid-form {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-    }
-
-    .standard-form label, .grid-form label {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.88rem;
-      gap: 4px;
-      color: var(--text-primary);
-    }
-
-    .standard-form input, .grid-form input, .grid-form select {
-      padding: 10px 12px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 8px;
-      outline: none;
-      font-size: 0.9rem;
-    }
-
-    .standard-form input:focus, .grid-form input:focus, .grid-form select:focus {
-      border-color: var(--accent-slate-blue);
-    }
-
-    .primary-btn {
-      background-color: var(--accent-mint);
-      color: #2c5244;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background-color 0.2s, color 0.2s;
-    }
-
-    .primary-btn:hover {
-      background-color: var(--accent-mint-dark);
-      color: white;
-    }
-
-    .secondary-btn {
-      background-color: #edf2f0;
-      color: var(--text-muted);
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .button-group { display: flex; gap: 10px; }
-
-    /* Student / Data List Layout */
-    .student-list { display: flex; flex-direction: column; gap: 12px; }
-
-    .student-item {
-      border: 1px solid #e1ebe6;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .student-header {
-      background-color: #f4f9f7;
-      padding: 14px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .arrow-icon {
-      width: 16px;
-      height: 16px;
-      stroke: var(--accent-slate-blue);
-      stroke-width: 2;
-      fill: none;
-      transition: transform 0.2s ease;
-    }
-
-    .student-item.expanded .arrow-icon {
-      transform: rotate(90deg);
-    }
-
-    .student-details { padding: 20px; background: white; border-top: 1px solid #e1ebe6; }
-    .student-actions-wrapper { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-    .delete-icon-btn { background: none; border: 1px solid #f0d0d0; color: var(--danger-red); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
-    .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-    .badge-pending { background: rgba(245, 158, 11, 0.15); color: #d97706; }
-    .badge-active { background: rgba(56, 161, 105, 0.15); color: var(--valid-green); }
-
-    /* Password Validation UI */
-    .password-rules-box {
-      background-color: #f8faf9;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      font-size: 0.82rem;
-    }
-
-    .rule-item {
-      color: var(--danger-red);
-      margin: 4px 0;
-      transition: color 0.2s ease;
-    }
-
-    .rule-item.valid {
-      color: var(--valid-green) !important;
-      font-weight: 600;
-    }
-
-    /* Modal Styling */
-    .modal {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center;
-      z-index: 1000;
-    }
-    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 380px; position: relative; }
-    .close-btn { position: absolute; top: 12px; right: 16px; font-size: 1.4rem; cursor: pointer; }
-
-    /* Group Chat Floating Widget */
-    #chat-widget { position: fixed; bottom: 50px; right: 20px; z-index: 1000; }
-
-    .chat-fab {
-      position: relative;
-      width: 50px; 
-      height: 50px; 
-      border-radius: 50%; 
-      background: var(--accent-slate-blue);
-      color: white; 
-      border: none; 
-      font-size: 1.4rem; 
-      cursor: pointer; 
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-
-    #chat-unread-badge {
-      position: absolute;
-      top: -4px;
-      right: -4px;
-      background-color: var(--danger-red, #e53e3e);
-      color: #ffffff;
-      font-size: 0.72rem;
-      font-weight: bold;
-      line-height: 1;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 4px;
-      border-radius: 9999px;
-      border: 2px solid var(--card-bg, #ffffff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      z-index: 10;
-    }
-
-    .chat-box {
-      width: 310px; height: 400px; background: white; border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
-      display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; right: 0;
-    }
-
-    .chat-header { background: var(--accent-slate-blue); color: white; padding: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-
-    .chat-messages {
-      flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      background-color: #fafbfc;
-    }
-
-    .chat-msg {
-      max-width: 82%;
-      padding: 8px 12px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    .chat-msg.my-msg {
-      align-self: flex-end;
-      background-color: var(--accent-slate-blue);
-      color: #ffffff;
-      border-bottom-right-radius: 2px;
-      text-align: left;
-    }
-
-    .chat-msg.other-msg {
-      align-self: flex-start;
-      background-color: #edf2f7;
-      color: var(--text-primary);
-      border-bottom-left-radius: 2px;
-      text-align: left;
-    }
-
-    .msg-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.72rem;
-      margin-bottom: 4px;
-      opacity: 0.9;
-    }
-
-    .chat-msg.my-msg .msg-time { color: #e2e8f0; }
-    .chat-msg.other-msg .msg-time { color: var(--text-muted); }
-    .msg-body { word-break: break-word; }
-
-    .chat-input-row { display: flex; padding: 10px; border-top: 1px solid var(--border-color); background: #ffffff; gap: 6px; align-items: center; }
-    .chat-input-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; }
-
-    .emoji-toggle-btn {
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      padding: 0 4px;
-      transition: transform 0.1s ease;
-    }
-    .emoji-toggle-btn:hover { transform: scale(1.15); }
-
-    .emoji-picker-container {
-      position: absolute;
-      bottom: 52px;
-      left: 10px;
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 8px;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      z-index: 1050;
-    }
-
-    .emoji-picker-container span {
-      font-size: 1.2rem;
-      cursor: pointer;
-      text-align: center;
-      border-radius: 4px;
-      padding: 2px;
-      transition: background 0.15s;
-    }
-    .emoji-picker-container span:hover { background-color: #edf2f7; }
-
-    /* Bottom Footer */
-    .bottom-footer {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      background-color: #1a202c; color: #a0aec0; text-align: center;
-      padding: 8px; font-size: 0.82rem; z-index: 900;
-    }
-
-    body[dir="rtl"] { direction: rtl; text-align: right; }
-  </style>
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- SheetJS for Excel Exports -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-
-  <!-- TOP NAVIGATION BAR -->
-  <header class="top-nav">
-    <div class="nav-left">
-      <span class="brand-title">Training Plus Institute</span>
-      <div class="search-container">
-        <input type="text" id="global-search" placeholder="Search system records..." oninput="handleSearch(this.value)" />
-      </div>
-    </div>
-    
-    <div class="nav-controls">
-      <button class="nav-btn active" id="btn-role-manager" onclick="switchRole('manager')">Manager View</button>
-      <button class="nav-btn" id="btn-role-staff" onclick="switchRole('staff')">Data Entry View</button>
-      <button class="nav-btn logout-btn" onclick="openPinModal()">Change PIN</button>
-    </div>
-  </header>
-
-  <!-- MAIN CONTAINER -->
-  <div class="main-wrapper">
-    <div class="card-view">
-      
-      <div class="dashboard-header">
-        <div>
-          <h2 id="view-title">System Dashboard</h2>
-          <p id="view-subtitle" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Manager Access Active</p>
-        </div>
-      </div>
-
-      <!-- TABS HEADER -->
-      <div class="tab-header">
-        <button class="tab-btn active role-mgr-tab" onclick="switchTab('approvals', event)">Access Requests</button>
-        <button class="tab-btn role-mgr-tab" onclick="switchTab('courses', event)">Courses & Classes</button>
-        <button class="tab-btn role-mgr-tab" onclick="switchTab('employees', event)">Employees</button>
-        <button class="tab-btn" id="tab-btn-students" onclick="switchTab('students', event)">Student Records</button>
-        <button class="tab-btn placeholder" onclick="openExpansionModal('Financial Module')">+ Add Module</button>
-      </div>
-
-      <!-- TAB 1: ACCESS APPROVALS (Manager Only) -->
-      <section id="tab-approvals" class="tab-content role-mgr-content">
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Pending Sign-in Notifications</h3>
-        <div class="student-list" id="approvals-list">
-          <div class="student-item">
-            <div class="student-header">
-              <div>
-                <span>Sarah Ali</span>
-                <span class="status-badge badge-pending" style="margin-left: 10px;">Pending Approval</span>
-              </div>
-              <svg class="arrow-icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+    <header class="top-nav">
+        <div class="nav-left">
+            <div class="search-container hidden" id="search-box">
+                <input type="text" id="search-input" placeholder="Search by name or CPR..." oninput="handleSearch()">
             </div>
-            <div class="student-details">
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Email: sarah@trainingplus.com | Requested: Today, 08:30 AM</p>
-              <div class="button-group">
-                <button class="primary-btn" onclick="approveUser(this)">Grant Access</button>
-                <button class="secondary-btn" style="color: var(--danger-red);" onclick="deleteItem(this)">Deny</button>
-              </div>
-            </div>
-          </div>
         </div>
-      </section>
-
-      <!-- TAB 2: COURSES & CLASSES (Manager Only) -->
-      <section id="tab-courses" class="tab-content role-mgr-content hidden">
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Add New Course</h3>
-        <form class="grid-form" onsubmit="addCourse(event)" style="margin-bottom: 24px;">
-          <label>Course Name <input type="text" id="course-name" required /></label>
-          <label>Class Code <input type="text" id="class-code" required /></label>
-          <div style="align-self: flex-end;">
-            <button type="submit" class="primary-btn">Add Course</button>
-          </div>
-        </form>
-
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Active Courses</h3>
-        <div class="student-list" id="courses-list">
-          <div class="student-item">
-            <div class="student-header">
-              <span>Web Engineering (CS441-A)</span>
-              <button class="delete-icon-btn" onclick="deleteItem(this)">Delete</button>
-            </div>
-          </div>
+        <div class="nav-controls">
+            <button id="lang-toggle-btn" class="nav-btn" onclick="toggleLanguage()">AR / EN</button>
+            <button id="download-all-btn" class="nav-btn hidden" onclick="downloadAllStudentsData()">Download All (Excel)</button>
+            <button id="account-btn" class="nav-btn hidden" onclick="openAccountModal()">Account</button>
+            <button id="logout-btn" class="nav-btn logout-btn hidden" onclick="logoutUser()">Logout</button>
         </div>
-      </section>
+    </header>
 
-      <!-- TAB 3: EMPLOYEES (Manager Only) -->
-      <section id="tab-employees" class="tab-content role-mgr-content hidden">
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Add New Employee</h3>
-        <form class="grid-form" onsubmit="addEmployee(event)" style="margin-bottom: 24px;">
-          <label>Full Name <input type="text" id="emp-name" required /></label>
-          <label>Email Address <input type="email" id="emp-email" required /></label>
-          <div style="align-self: flex-end;">
-            <button type="submit" class="primary-btn">Add Employee</button>
-          </div>
-        </form>
+    <main>
+        <!-- Auth View with 3 Role Options -->
+        <section id="view-auth" class="card-view" style="max-width: 420px; margin: 60px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <h2 style="color: #2b6cb0; margin-bottom: 8px;">Welcome</h2>
+            <p style="color: #718096; margin-bottom: 24px; font-size: 0.9rem;">Sign in to access the Student Directory</p>
 
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Employee Roster</h3>
-        <div class="student-list" id="employees-list">
-          <div class="student-item">
-            <div class="student-header">
-              <div>
-                <strong>Ahmed Khalifa</strong>
-                <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 8px;">ahmed@trainingplus.com</span>
-              </div>
-              <button class="delete-icon-btn" onclick="deleteItem(this)">Delete</button>
+            <!-- Employee Sign In (Google Auth) -->
+            <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
+                <h4 style="margin-bottom: 12px; color: #4a5568;">Employee Portal</h4>
+                <div id="g_id_onload"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-width="350"></div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <!-- TAB 4: STUDENT RECORDS (Shared View) -->
-      <section id="tab-students" class="tab-content hidden">
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Add Student Entry</h3>
-        <form class="grid-form" onsubmit="addStudent(event)" style="margin-bottom: 24px;">
-          <label>Student Name <input type="text" id="stu-name" required /></label>
-          <label>CPR Number <input type="text" id="stu-cpr" maxlength="9" pattern="\d{9}" placeholder="9-digit CPR" required /></label>
-          <div style="align-self: flex-end;">
-            <button type="submit" class="primary-btn">Add Student</button>
-          </div>
-        </form>
-
-        <h3 style="margin-bottom: 12px; font-size: 1rem;">Registered Students</h3>
-        <div class="student-list" id="students-list">
-          <div class="student-item">
-            <div class="student-header" onclick="toggleAccordion(this)">
-              <div>
-                <strong>Lora Adel</strong>
-                <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 8px;">CPR: 010203040</span>
-              </div>
-              <svg class="arrow-icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+            <!-- Manager & Operator Staff Login -->
+            <div>
+                <h4 style="margin-bottom: 12px; color: #4a5568;">Staff Sign In</h4>
+                <form onsubmit="handleStaffLogin(event)">
+                    <select id="staff-role" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <option value="manager">Manager</option>
+                        <option value="operator">Operator</option>
+                    </select>
+                    <input type="email" id="staff-email" placeholder="Enter Staff Email" required style="width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                    <button type="submit" class="primary-btn" style="width: 100%;">Staff Login</button>
+                </form>
             </div>
-            <div class="student-details hidden">
-              <div class="student-actions-wrapper mgr-action">
-                <button class="delete-icon-btn" onclick="deleteItem(this)">Delete Record</button>
-              </div>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Enrollment Status: Active</p>
+        </section>
+
+        <!-- Home / Directory View -->
+        <section id="view-home" class="card-view hidden">
+            <div class="dashboard-header">
+                <h2>Student Directory</h2>
+                <button class="primary-btn" onclick="showView('view-add-cpr')">+ Add New CPR</button>
             </div>
-          </div>
-        </div>
-      </section>
+            <div id="student-container" class="student-list"></div>
+        </section>
 
-    </div>
-  </div>
+        <!-- CPR Entry View -->
+        <section id="view-add-cpr" class="card-view hidden">
+            <h2>Register New CPR</h2>
+            <p class="subtitle">Enter a 9-digit CPR number to add a student.</p>
+            <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
+                <label>
+                    <span>CPR Number (9 Digits):</span>
+                    <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456">
+                </label>
+                <div class="button-group">
+                    <button type="submit" class="primary-btn" id="add-student-btn">Submit Record</button>
+                    <button type="button" class="secondary-btn" onclick="showView('view-home')">Done / Back</button>
+                </div>
+            </form>
+        </section>
+    </main>
 
-  <!-- FLOATING GROUP CHAT WIDGET -->
-  <div id="chat-widget">
-    <button class="chat-fab" onclick="toggleChat()">
-      💬
-      <span id="chat-unread-badge">1</span>
-    </button>
+    <script>
+        // Callback for Google Sign-In (Employees)
+        async function handleCredentialResponse(response) {
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credential: response.credential })
+                });
 
-    <div class="chat-box hidden" id="chat-box">
-      <div class="chat-header">
-        <span>Team Discussion</span>
-        <span style="cursor: pointer;" onclick="toggleChat()">✕</span>
-      </div>
-      
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-msg other-msg">
-          <div class="msg-header">
-            <strong>Masaada Saleh</strong>
-            <span class="msg-time">10:14 AM</span>
-          </div>
-          <div class="msg-body">Please verify the new student CPR entries for today.</div>
-        </div>
-      </div>
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Authentication failed');
+                    return;
+                }
 
-      <!-- Emoji Picker Dropdown -->
-      <div class="emoji-picker-container hidden" id="emoji-picker">
-        <span onclick="insertEmoji('👍')">👍</span>
-        <span onclick="insertEmoji('✅')">✅</span>
-        <span onclick="insertEmoji('😊')">😊</span>
-        <span onclick="insertEmoji('🎉')">🎉</span>
-        <span onclick="insertEmoji('📌')">📌</span>
-      </div>
+                localStorage.setItem('token', data.token);
+                document.getElementById('view-auth').classList.add('hidden');
+                document.getElementById('view-home').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                alert('Sign in error. Please try again.');
+            }
+        }
 
-      <div class="chat-input-row">
-        <button class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
-        <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="handleChatKey(event)" />
-        <button class="primary-btn" style="padding: 6px 12px;" onclick="sendChatMessage()">Send</button>
-      </div>
-    </div>
-  </div>
+        // Staff Sign-In (Manager / Operator)
+        async function handleStaffLogin(event) {
+            event.preventDefault();
+            const role = document.getElementById('staff-role').value;
+            const email = document.getElementById('staff-email').value;
 
-  <!-- PIN CHANGE MODAL -->
-  <div class="modal hidden" id="pin-modal">
-    <div class="modal-content">
-      <span class="close-btn" onclick="closePinModal()">✕</span>
-      <h3 style="margin-bottom: 8px;">Update 4-Digit PIN</h3>
-      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Set a new secure passcode for your system profile.</p>
+            const res = await fetch('http://localhost:5000/api/auth/staff-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, role })
+            });
 
-      <form class="standard-form" onsubmit="updatePin(event)">
-        <label>New PIN
-          <input type="password" id="pin-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 6px;" />
-        </label>
-        
-        <div class="password-rules-box">
-          <div class="rule-item" id="rule-len">• Must be exactly 4 digits</div>
-          <div class="rule-item" id="rule-num">• Numeric characters only</div>
-        </div>
-
-        <button type="submit" class="primary-btn" style="margin-top: 8px;">Save Security PIN</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- EXPANSION MODAL HOOK -->
-  <div class="modal hidden" id="expansion-modal">
-    <div class="modal-content">
-      <span class="close-btn" onclick="closeExpansionModal()">✕</span>
-      <h3 style="margin-bottom: 8px;">Module Workspace Slot</h3>
-      <p id="expansion-desc" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 16px;"></p>
-      <button class="secondary-btn" style="width: 100%;" onclick="closeExpansionModal()">Close Window</button>
-    </div>
-  </div>
-
-  <!-- BOTTOM FOOTER -->
-  <footer class="bottom-footer">
-    Training Plus Institute &copy; 2026 | Enterprise System Core
-  </footer>
-
-  <!-- SYSTEM JAVASCRIPT -->
-  <script>
-    let currentRole = 'manager';
-
-    // Role Switcher Logic
-    function switchRole(role) {
-      currentRole = role;
-      document.getElementById('btn-role-manager').classList.toggle('active', role === 'manager');
-      document.getElementById('btn-role-staff').classList.toggle('active', role === 'staff');
-      
-      document.getElementById('view-subtitle').innerText = role === 'manager' 
-        ? "Manager Access Active" 
-        : "Data Entry Staff Mode";
-
-      // Hide/Show Manager specific controls
-      document.querySelectorAll('.role-mgr-tab').forEach(el => el.classList.toggle('hidden', role !== 'manager'));
-      document.querySelectorAll('.role-mgr-content').forEach(el => el.classList.toggle('hidden', role !== 'manager'));
-      document.querySelectorAll('.mgr-action').forEach(el => el.classList.toggle('hidden', role !== 'manager'));
-
-      if (role === 'staff') {
-        switchTab('students');
-      } else {
-        switchTab('approvals');
-      }
-    }
-
-    // Tab Navigation Switcher
-    function switchTab(tabName, event) {
-      document.querySelectorAll('.tab-content').forEach(sec => sec.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
-      const targetTab = document.getElementById(`tab-${tabName}`);
-      if (targetTab) targetTab.classList.remove('hidden');
-
-      if (event && event.target) {
-        event.target.classList.add('active');
-      } else {
-        const matchingBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabName));
-        if (matchingBtn) matchingBtn.classList.add('active');
-      }
-    }
-
-    // Accordions
-    function toggleAccordion(headerEl) {
-      const parent = headerEl.closest('.student-item');
-      parent.classList.toggle('expanded');
-      const details = parent.querySelector('.student-details');
-      if (details) details.classList.toggle('hidden');
-    }
-
-    // Dynamic Data Entry
-    function addCourse(e) {
-      e.preventDefault();
-      const name = document.getElementById('course-name').value;
-      const code = document.getElementById('class-code').value;
-      const html = `<div class="student-item"><div class="student-header"><span>${name} (${code})</span><button class="delete-icon-btn" onclick="deleteItem(this)">Delete</button></div></div>`;
-      document.getElementById('courses-list').insertAdjacentHTML('beforeend', html);
-      e.target.reset();
-    }
-
-    function addEmployee(e) {
-      e.preventDefault();
-      const name = document.getElementById('emp-name').value;
-      const email = document.getElementById('emp-email').value;
-      const html = `<div class="student-item"><div class="student-header"><div><strong>${name}</strong><span style="font-size:0.82rem; color:var(--text-muted); margin-left:8px;">${email}</span></div><button class="delete-icon-btn" onclick="deleteItem(this)">Delete</button></div></div>`;
-      document.getElementById('employees-list').insertAdjacentHTML('beforeend', html);
-      e.target.reset();
-    }
-
-    function addStudent(e) {
-      e.preventDefault();
-      const name = document.getElementById('stu-name').value;
-      const cpr = document.getElementById('stu-cpr').value;
-      const mgrClass = currentRole === 'manager' ? '' : 'hidden';
-      
-      const html = `
-        <div class="student-item">
-          <div class="student-header" onclick="toggleAccordion(this)">
-            <div><strong>${name}</strong><span style="font-size:0.82rem; color:var(--text-muted); margin-left:8px;">CPR: ${cpr}</span></div>
-            <svg class="arrow-icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
-          </div>
-          <div class="student-details hidden">
-            <div class="student-actions-wrapper mgr-action ${mgrClass}">
-              <button class="delete-icon-btn" onclick="deleteItem(this)">Delete Record</button>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">Enrollment Status: Active</p>
-          </div>
-        </div>`;
-      document.getElementById('students-list').insertAdjacentHTML('beforeend', html);
-      e.target.reset();
-    }
-
-    function approveUser(btn) {
-      const item = btn.closest('.student-item');
-      const badge = item.querySelector('.status-badge');
-      badge.className = 'status-badge badge-active';
-      badge.innerText = 'Access Granted';
-      btn.parentElement.innerHTML = '<span style="color:var(--valid-green); font-size:0.85rem; font-weight:bold;">Approved</span>';
-    }
-
-    function deleteItem(btn) {
-      btn.closest('.student-item').remove();
-    }
-
-    // Modal Operations
-    function openPinModal() { document.getElementById('pin-modal').classList.remove('hidden'); }
-    function closePinModal() { document.getElementById('pin-modal').classList.add('hidden'); }
-
-    document.getElementById('pin-input').addEventListener('input', function(e) {
-      const val = e.target.value;
-      const isLen = val.length === 4;
-      const isNum = /^\d+$/.test(val);
-
-      document.getElementById('rule-len').classList.toggle('valid', isLen);
-      document.getElementById('rule-num').classList.toggle('valid', isNum && val.length > 0);
-    });
-
-    function updatePin(e) {
-      e.preventDefault();
-      const val = document.getElementById('pin-input').value;
-      if (val.length === 4 && /^\d+$/.test(val)) {
-        alert('PIN code successfully updated!');
-        closePinModal();
-      }
-    }
-
-    function openExpansionModal(modName) {
-      document.getElementById('expansion-desc').innerText = `Slot configured for ${modName}. Component layout and JS handlers ready for registration.`;
-      document.getElementById('expansion-modal').classList.remove('hidden');
-    }
-    function closeExpansionModal() { document.getElementById('expansion-modal').classList.add('hidden'); }
-
-    // Floating Chat Operations
-    function toggleChat() {
-      document.getElementById('chat-box').classList.toggle('hidden');
-      document.getElementById('chat-unread-badge').style.display = 'none';
-    }
-
-    function toggleEmojiPicker() {
-      document.getElementById('emoji-picker').classList.toggle('hidden');
-    }
-
-    function insertEmoji(emoji) {
-      const input = document.getElementById('chat-input');
-      input.value += emoji;
-      toggleEmojiPicker();
-      input.focus();
-    }
-
-    function handleChatKey(e) { if (e.key === 'Enter') sendChatMessage(); }
-
-    function sendChatMessage() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const msgHtml = `
-        <div class="chat-msg my-msg">
-          <div class="msg-header">
-            <strong>You</strong>
-            <span class="msg-time">Just now</span>
-          </div>
-          <div class="msg-body">${text}</div>
-        </div>`;
-      
-      const container = document.getElementById('chat-messages');
-      container.insertAdjacentHTML('beforeend', msgHtml);
-      input.value = '';
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function handleSearch(query) {
-      const filter = query.toLowerCase();
-      document.querySelectorAll('.student-item').forEach(item => {
-        const text = item.innerText.toLowerCase();
-        item.style.display = text.includes(filter) ? '' : 'none';
-      });
-    }
-  </script>
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.setItem('token', data.token);
+                document.getElementById('view-auth').classList.add('hidden');
+                document.getElementById('view-home').classList.remove('hidden');
+            } else {
+                alert(data.error);
+            }
+        }
+    </script>
+    <script src="script.js"></script>
 </body>
 </html>
