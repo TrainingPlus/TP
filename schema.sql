@@ -1,6 +1,5 @@
 CREATE DATABASE IF NOT EXISTS training_plus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE training_plus;
-
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) UNIQUE NOT NULL,
