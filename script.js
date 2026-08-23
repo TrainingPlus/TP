@@ -291,6 +291,59 @@ async function signInWithGoogle() {
     }
 }
 
+// Function to update current user's password (for Manager and Operator)
+async function changeUserPassword() {
+    const user = auth.currentUser;
+    const newPassword = document.getElementById('new-password-input')?.value.trim();
+    const confirmPassword = document.getElementById('confirm-password-input')?.value.trim();
+
+    if (!user) {
+        alert("No active session found.");
+        return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+        alert("Password must be at least 6 characters long.");
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        alert("Passwords do not match!");
+        return;
+    }
+
+    try {
+        await user.updatePassword(newPassword);
+        alert("Password updated successfully! Next time you log in, use your new password.");
+        document.getElementById('new-password-input').value = "";
+        document.getElementById('confirm-password-input').value = "";
+        closeAccountModal();
+    } catch (error) {
+        console.error("Error updating password:", error);
+        if (error.code === 'auth/requires-recent-login') {
+            alert("Security Notice: Please log out and log back in before changing your password.");
+        } else {
+            alert("Failed to update password: " + error.message);
+        }
+    }
+}
+//
+//
+// Show/Hide password section depending on whether the user logged in via Password or Google
+function openAccountModal() { 
+    const user = auth.currentUser;
+    const passwordSection = document.getElementById('change-password-section');
+    
+    // Hide password change option for Google Sign-In (Employees)
+    if (user && user.providerData.some(p => p.providerId === 'google.com')) {
+        if (passwordSection) passwordSection.style.display = 'none';
+    } else {
+        if (passwordSection) passwordSection.style.display = 'block';
+    }
+
+    document.getElementById('account-modal').classList.remove('hidden'); 
+}
+
 // ==========================================
 // 4. CPR RECORD MANAGEMENT
 // ==========================================
