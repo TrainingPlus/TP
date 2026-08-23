@@ -174,9 +174,90 @@ auth.onAuthStateChanged(async (user) => {
 // ==========================================
 // 3. AUTHENTICATION & EMAIL NOTIFICATIONS
 // ==========================================
+// Toggle forms based on role dropdown selection
+function handleRoleSelectionChange() {
+    const role = document.getElementById('auth-role-select').value;
+    
+    document.getElementById('manager-form-container').classList.add('hidden');
+    document.getElementById('operator-form-container').classList.add('hidden');
+    document.getElementById('employee-form-container').classList.add('hidden');
+
+    if (role === 'manager') {
+        document.getElementById('manager-form-container').classList.remove('hidden');
+    } else if (role === 'operator') {
+        document.getElementById('operator-form-container').classList.remove('hidden');
+    } else if (role === 'employee') {
+        document.getElementById('employee-form-container').classList.remove('hidden');
+    }
+}
+
+// 1. Manager Authentication (Email & Password)
+async function signInManager() {
+    const email = document.getElementById('manager-email').value.trim();
+    const password = document.getElementById('manager-password').value.trim();
+
+    if (!email || !password) {
+        alert("Please enter both email and password.");
+        return;
+    }
+
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const userRef = db.collection('users').doc(userCredential.user.uid);
+        await userRef.set({
+            uid: userCredential.user.uid,
+            email: email,
+            role: 'manager',
+            status: 'approved'
+        }, { merge: true });
+    } catch (error) {
+        console.error("Manager Login Error:", error);
+        alert("Manager Sign-In Failed: " + error.message);
+    }
+}
+
+// 2. Operator Authentication (Create or Login with Password)
+async function handleOperatorAuth() {
+    const email = document.getElementById('operator-email').value.trim();
+    const password = document.getElementById('operator-password').value.trim();
+
+    if (!email || !password) {
+        alert("Please enter an email and password.");
+        return;
+    }
+
+    try {
+        // Try logging in first
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        await db.collection('users').doc(userCredential.user.uid).set({
+            role: 'operator',
+            status: 'approved'
+        }, { merge: true });
+    } catch (error) {
+        // If account doesn't exist, create operator account with given password
+        if (error.code === 'auth/user-not-found') {
+            try {
+                const newUser = await auth.createUserWithEmailAndPassword(email, password);
+                await db.collection('users').doc(newUser.user.uid).set({
+                    uid: newUser.user.uid,
+                    email: email,
+                    role: 'operator',
+                    status: 'approved',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("Operator account created and signed in successfully!");
+            } catch (createError) {
+                alert("Operator Sign-Up Failed: " + createError.message);
+            }
+        } else {
+            alert("Operator Sign-In Failed: " + error.message);
+        }
+    }
+}
+
+// 3. Employee Google Authentication (Sends EmailJS approval request to manager)
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    const selectedRole = document.getElementById('auth-role-select')?.value || 'employee';
 
     try {
         const result = await auth.signInWithPopup(provider);
@@ -184,74 +265,30 @@ async function signInWithGoogle() {
         const userRef = db.collection('users').doc(user.uid);
         const userSnap = await userRef.get();
 
-        if (!userSnap.exists) {
-            const isEmployee = selectedRole === 'employee';
-            
+        if (!userSnap.exists()) {
             await userRef.set({
                 uid: user.uid,
-                name: user.displayName || 'User',
+                name: user.displayName || 'Employee',
                 email: user.email,
-                role: selectedRole,
-                status: isEmployee ? 'pending' : 'approved',
+                role: 'employee',
+                status: 'pending',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            if (isEmployee) {
-                sendApprovalEmailToManager(user);
-                alert("Employee access request submitted! A notification has been sent to the Manager's Gmail for approval.");
+            sendApprovalEmailToManager(user);
+            alert("Employee sign-in request submitted! An email notification was sent to the Manager for approval.");
+            await auth.signOut();
+        } else {
+            const userData = userSnap.data();
+            if (userData.role === 'employee' && userData.status === 'pending') {
+                alert("Your Employee account is still pending Manager approval.");
                 await auth.signOut();
-                return;
             }
         }
     } catch (error) {
         console.error("Google Sign-In Error:", error);
-        alert("Sign-In Failed: " + error.message);
+        alert("Google Sign-In Failed: " + error.message);
     }
-}
-
-function sendApprovalEmailToManager(user) {
-    const templateParams = {
-        manager_email: MANAGER_GMAIL,
-        employee_name: user.displayName || "Employee User",
-        employee_email: user.email,
-        employee_uid: user.uid
-    };
-
-    // Replace YOUR_SERVICE_ID and YOUR_TEMPLATE_ID with your EmailJS identifiers
-    emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams)
-        .then(() => console.log("Notification email sent to Manager successfully."))
-        .catch((err) => console.error("Failed to send EmailJS notification:", err));
-}
-
-function updateUserUI(isLoggedIn) {
-    document.getElementById('search-box')?.classList.toggle('hidden', !isLoggedIn);
-    document.getElementById('download-all-btn')?.classList.toggle('hidden', !isLoggedIn);
-    document.getElementById('account-btn')?.classList.toggle('hidden', !isLoggedIn);
-    document.getElementById('logout-btn')?.classList.toggle('hidden', !isLoggedIn);
-
-    if (isLoggedIn && currentUserData) {
-        const idEl = document.getElementById('modal-userid');
-        const nameEl = document.getElementById('modal-username');
-        const emailEl = document.getElementById('modal-email');
-        const roleEl = document.getElementById('modal-role');
-
-        const simpleUserId = currentUserData.uid 
-            ? `#USR-${currentUserData.uid.substring(0, 6).toUpperCase()}`
-            : '#10001';
-
-        if (idEl) idEl.innerText = simpleUserId;
-        if (nameEl) nameEl.innerText = currentUserData.displayName || currentUserData.email?.split('@')[0] || "User";
-        if (emailEl) emailEl.innerText = currentUserData.email || '';
-        if (roleEl) roleEl.innerText = currentRole.toUpperCase();
-
-        showView('view-home');
-    } else {
-        showView('view-auth');
-    }
-}
-
-function logoutUser() {
-    auth.signOut();
 }
 
 // ==========================================
