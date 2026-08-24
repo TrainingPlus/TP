@@ -87,7 +87,10 @@
     .chat-msg.other-msg { align-self: flex-start; background-color: #edf2f7; color: var(--text-primary); }
     .chat-input-row { display: flex; padding: 10px; border-top: 1px solid var(--border-color); background: #ffffff; gap: 6px; align-items: center; }
     .chat-input-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; }
-    .bottom-footer { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #1a202c; color: #a0aec0; text-align: center; padding: 8px; font-size: 0.82rem; z-index: 900; }
+    
+    /* Footer Styling */
+    .bottom-footer { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #1a202c; color: #a0aec0; text-align: center; padding: 8px 16px; font-size: 0.82rem; z-index: 900; display: flex; justify-content: space-between; align-items: center; }
+    .footer-time { font-family: monospace; color: #cbd5e1; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -110,12 +113,11 @@
   <!-- MAIN CONTAINER -->
   <div class="main-wrapper">
     
-    <!-- AUTHENTICATION VIEW (Role Choice, Manager Password, Operator Password, Employee Google) -->
+    <!-- AUTHENTICATION VIEW -->
     <section id="view-auth" class="card-view" style="max-width: 420px; margin: 60px auto; text-align: center; padding: 32px 24px;">
       <h2 style="color: #2b6cb0; margin-bottom: 8px;">Welcome</h2>
       <p style="color: #718096; margin-bottom: 20px; font-size: 0.9rem;">Select your role to continue</p>
 
-      <!-- Role Selector -->
       <div style="margin-bottom: 20px; text-align: left;">
         <label style="font-size: 0.85rem; color: #4a5568; font-weight: 600;">I am a:</label>
         <select id="auth-role-select" onchange="handleRoleSelectionChange()" style="width: 100%; padding: 10px; margin-top: 4px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
@@ -126,7 +128,6 @@
         </select>
       </div>
 
-      <!-- Manager Password Form -->
       <div id="manager-form-container" class="hidden" style="text-align: left; margin-bottom: 16px;">
         <label style="font-size: 0.85rem; color: #4a5568; font-weight: 600;">Manager Email:</label>
         <input type="email" id="manager-email" placeholder="manager@gmail.com" style="width: 100%; padding: 10px; margin: 4px 0 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
@@ -137,7 +138,6 @@
         <button type="button" class="primary-btn" onclick="signInManager()" style="width: 100%; margin-top: 16px; padding: 10px;">Sign In as Manager</button>
       </div>
 
-      <!-- Operator Password Form -->
       <div id="operator-form-container" class="hidden" style="text-align: left; margin-bottom: 16px;">
         <label style="font-size: 0.85rem; color: #4a5568; font-weight: 600;">Operator Email:</label>
         <input type="email" id="operator-email" placeholder="operator@gmail.com" style="width: 100%; padding: 10px; margin: 4px 0 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
@@ -148,7 +148,6 @@
         <button type="button" class="primary-btn" onclick="handleOperatorAuth()" style="width: 100%; margin-top: 16px; padding: 10px;">Continue as Operator</button>
       </div>
 
-      <!-- Employee Google Auth -->
       <div id="employee-form-container" class="hidden">
         <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
           style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; font-weight: 600; font-size: 0.95rem; cursor: pointer;">
@@ -172,7 +171,6 @@
         </div>
       </div>
 
-      <!-- TABS HEADER -->
       <div class="tab-header">
         <button class="tab-btn active role-mgr-tab" onclick="switchTab('approvals', event)">Access Requests</button>
         <button class="tab-btn role-mgr-tab" onclick="switchTab('courses', event)">Courses & Classes</button>
@@ -180,13 +178,11 @@
         <button class="tab-btn" id="tab-btn-students" onclick="switchTab('students', event)">Student Records</button>
       </div>
 
-      <!-- TAB 1: ACCESS APPROVALS (Manager Only) -->
       <section id="tab-approvals" class="tab-content role-mgr-content">
         <h3 style="margin-bottom: 12px; font-size: 1rem;">Pending Sign-in Notifications</h3>
         <div class="student-list" id="approvals-list"></div>
       </section>
 
-      <!-- TAB 2: COURSES & CLASSES (Manager Only) -->
       <section id="tab-courses" class="tab-content role-mgr-content hidden">
         <h3 style="margin-bottom: 12px; font-size: 1rem;">Add New Course</h3>
         <form class="grid-form" onsubmit="addCourse(event)" style="margin-bottom: 24px;">
@@ -201,7 +197,6 @@
         <div class="student-list" id="courses-list"></div>
       </section>
 
-      <!-- TAB 3: EMPLOYEES (Manager Only) -->
       <section id="tab-employees" class="tab-content role-mgr-content hidden">
         <h3 style="margin-bottom: 12px; font-size: 1rem;">Add New Employee</h3>
         <form class="grid-form" onsubmit="addEmployee(event)" style="margin-bottom: 24px;">
@@ -216,7 +211,6 @@
         <div class="student-list" id="employees-list"></div>
       </section>
 
-      <!-- TAB 4: STUDENT RECORDS (Shared View) -->
       <section id="tab-students" class="tab-content hidden">
         <h3 style="margin-bottom: 12px; font-size: 1rem;">Add Student Entry</h3>
         <form class="grid-form" onsubmit="addStudent(event)" style="margin-bottom: 24px;">
@@ -272,14 +266,32 @@
     </div>
   </div>
 
-  <!-- BOTTOM FOOTER -->
+  <!-- UPDATED BOTTOM FOOTER WITH TIME & DATE -->
   <footer class="bottom-footer">
-    Training Plus Institute &copy; 2026 | Enterprise System Core
+    <span>Training Plus Institute &copy; 2026 | Enterprise System Core</span>
+    <span id="footer-time-display" class="footer-time">Loading system time...</span>
   </footer>
 
   <!-- SYSTEM JAVASCRIPT -->
   <script>
-    // 1. Firebase Initialization (Replace with your Firebase Project Configuration)
+    // Live Footer Date & Time Clock Function
+    function updateFooterClock() {
+      const now = new Date();
+      const options = { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      };
+      document.getElementById('footer-time-display').innerText = now.toLocaleString('en-US', options);
+    }
+    setInterval(updateFooterClock, 1000);
+    updateFooterClock();
+
+    // Firebase Initialization
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
