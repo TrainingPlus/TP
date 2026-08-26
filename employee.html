@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="top-nav">
+        <div class="nav-left">
+            <span style="font-weight:700;">Employee Directory Portal</span>
+            <div class="search-container">
+                <input type="text" placeholder="Search student directory...">
+            </div>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
+            <div id="user-avatar-badge" class="avatar-icon">E</div>
+            <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="card-view">
+        <h2>Student Directory</h2>
+        <p style="color:var(--text-muted); margin-bottom: 16px;">System linked and fully synchronized.</p>
+
+        <div class="student-list">
+            <div class="student-item">
+                <div class="student-header">
+                    <span>Mada Saleh (CPR: 001234567)</span>
+                    <span style="color:var(--valid-green); font-size: 0.85rem;">Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection Permission Dialog Modal -->
+    <div id="inspection-modal" class="modal hidden">
+        <div class="modal-content" style="max-width:400px;">
+            <h3>Manager Inspection Request</h3>
+            <p style="margin: 12px 0; font-size: 0.9rem;">The manager wants to see your page workspace. Do you grant permission?</p>
+            <div class="button-group">
+                <button class="primary-btn" onclick="respondInspection(true)">Yes</button>
+                <button class="secondary-btn" onclick="respondInspection(false)">No</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-footer">© 2026 Management System Portal.</div>
+
+    <script src="script.js"></script>
+    <script>
+        checkAccess('employee');
+
+        // Simulated check if Manager requested access
+        setTimeout(() => {
+            // Un-comment line below to test prompt manually:
+            // document.getElementById('inspection-modal').classList.remove('hidden');
+        }, 1000);
+
+        function respondInspection(answer) {
+            document.getElementById('inspection-modal').classList.add('hidden');
+            const status = answer ? "accepted" : "declined";
+            sendEmailNotification("Manager", `Employee ${localStorage.getItem('current_user_name')} ${status} your page inspection request.`);
+            alert(`You responded: ${answer ? 'Yes' : 'No'}`);
+        }
+    </script>
+</body>
+</html>
