@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Plus Institute</title>
+    <title>Training Plus Institute - Employee Portal</title>
     <link rel="stylesheet" href="style.css">
     
     <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
@@ -32,18 +32,19 @@
     </header>
 
     <main>
-
-        <!-- Auth View -->
-        <section id="view-auth" class="card-view" style="max-width: 420px; margin: 60px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-            <h2 style="color: #2b6cb0; margin-bottom: 8px;" data-i18n="welcome_title">Welcome</h2>
-            <p style="color: #718096; margin-bottom: 28px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Sign in to access the Training Plus Student Directory</p>
+        <!-- Google-Only Auth View -->
+        <section id="view-auth" class="card-view" style="max-width: 400px; margin: 80px auto; text-align: center; padding: 40px 28px; background: var(--bg-card, #ffffff); border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);">
+            <div style="margin-bottom: 24px;">
+                <h2 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 8px; font-size: 1.6rem; font-weight: 700;" data-i18n="welcome_title">Welcome Back</h2>
+                <p style="color: var(--text-muted, #718096); font-size: 0.92rem; line-height: 1.4;" data-i18n="welcome_subtitle">Sign in with your institutional Google account to access the Directory</p>
+            </div>
 
             <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
-                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;"
-                onmouseover="this.style.background='#f8fafc'" 
-                onmouseout="this.style.background='#ffffff'"
+                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 18px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; color: #1e293b; font-weight: 600; font-size: 0.98rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#94a3b8';" 
+                onmouseout="this.style.background='#ffffff'; this.style.borderColor='#cbd5e1';"
             >
-                <svg width="20" height="20" viewBox="0 0 24 24">
+                <svg width="22" height="22" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -63,20 +64,20 @@
         </section>
 
         <!-- CPR Entry View -->
-<section id="view-add-cpr" class="card-view hidden">
-    <h2 data-i18n="register_cpr">Register New CPR</h2>
-    <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
-    <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
-        <label>
-            <span data-i18n="cpr_label">CPR Number (9 Digits):</span>
-            <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456">
-        </label>
-        <div class="button-group">
-            <button type="submit" class="primary-btn" id="add-student-btn" data-i18n="btn_submit">Submit Record</button>
-            <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
-        </div>
-    </form>
-</section>
+        <section id="view-add-cpr" class="card-view hidden">
+            <h2 data-i18n="register_cpr">Register New CPR</h2>
+            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
+            <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
+                <label>
+                    <span data-i18n="cpr_label">CPR Number (9 Digits):</span>
+                    <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456" pattern="\d{9}">
+                </label>
+                <div class="button-group">
+                    <button type="submit" class="primary-btn" id="add-student-btn" data-i18n="btn_submit">Submit Record</button>
+                    <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
+                </div>
+            </form>
+        </section>
 
         <!-- CPR Success View -->
         <section id="view-cpr-success" class="card-view hidden">
@@ -110,28 +111,41 @@
             <span id="chat-unread-badge" class="hidden">0</span>
         </button>
     
-    <div id="chat-window" class="chat-box hidden">
-        <div class="chat-header">
-            <span data-i18n="chat_header">Team Group Chat</span>
-            <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
-        </div>
-        
-        <div id="chat-messages" class="chat-messages"></div>
+        <div id="chat-window" class="chat-box hidden">
+            <div class="chat-header">
+                <span data-i18n="chat_header">Team Group Chat</span>
+                <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages"></div>
 
-        <!-- Emoji Picker Popup Container -->
-        <div id="emoji-picker" class="emoji-picker-container hidden">
-            <span>😀</span><span>😂</span><span>😍</span><span>👍</span><span>❤️</span>
-            <span>🔥</span><span>🎉</span><span>👏</span><span>🙏</span><span>✨</span>
-            <span>😊</span><span>😎</span><span>🙌</span><span>💯</span><span>🚀</span>
-        </div>
+            <!-- Emoji Picker Popup Container -->
+            <div id="emoji-picker" class="emoji-picker-container hidden">
+                <span onclick="insertEmoji('😀')">😀</span>
+                <span onclick="insertEmoji('😂')">😂</span>
+                <span onclick="insertEmoji('😍')">😍</span>
+                <span onclick="insertEmoji('👍')">👍</span>
+                <span onclick="insertEmoji('❤️')">❤️</span>
+                <span onclick="insertEmoji('🔥')">🔥</span>
+                <span onclick="insertEmoji('🎉')">🎉</span>
+                <span onclick="insertEmoji('👏')">👏</span>
+                <span onclick="insertEmoji('🙏')">🙏</span>
+                <span onclick="insertEmoji('✨')">✨</span>
+                <span onclick="insertEmoji('😊')">😊</span>
+                <span onclick="insertEmoji('😎')">😎</span>
+                <span onclick="insertEmoji('🙌')">🙌</span>
+                <span onclick="insertEmoji('💯')">💯</span>
+                <span onclick="insertEmoji('🚀')">🚀</span>
+            </div>
 
-        <!-- Chat Input Row -->
-        <div class="chat-input-row">
-            <button type="button" class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
-            <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-            <button type="button" class="primary-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
+            <!-- Chat Input Row -->
+            <div class="chat-input-row">
+                <button type="button" class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
+                <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button type="button" class="primary-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
+            </div>
         </div>
-</div>
+    </div>
     
     <footer class="bottom-footer">
         <p id="live-footer-datetime">Loading date & time...</p>
