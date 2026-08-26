@@ -18,7 +18,6 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-
 body {
     background-color: var(--bg-color);
     color: var(--text-primary);
@@ -26,6 +25,12 @@ body {
     min-height: 100vh;
 }
 
+body[dir="rtl"] { 
+    direction: rtl; 
+    text-align: right; 
+}
+
+/* Top Nav */
 .top-nav {
     display: flex;
     justify-content: space-between;
@@ -52,6 +57,7 @@ body {
 
 .nav-controls {
     display: flex;
+    align-items: center;
     gap: 8px;
 }
 
@@ -68,8 +74,22 @@ body {
 .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
 .logout-btn:hover { background-color: var(--danger-red); }
 
+.avatar-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--accent-mint);
+    color: #2c5244;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+/* Main Container */
 .card-view {
-    max-width: 800px;
+    max-width: 850px;
     margin: 30px auto;
     background: var(--card-bg);
     padding: 28px;
@@ -79,6 +99,37 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* Role Buttons */
+.role-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border-color);
+    background-color: #f8faf9;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.role-btn:hover {
+    border-color: var(--accent-slate-blue);
+    background-color: #f0f7f9;
+}
+
+.role-btn.selected {
+    background-color: var(--accent-slate-blue);
+    color: white;
+    border-color: var(--accent-slate-blue);
+}
 
 /* Tabs */
 .tab-header {
@@ -104,26 +155,6 @@ body {
     border-bottom: 3px solid var(--accent-slate-blue);
 }
 
-/* Password Validation UI */
-.password-rules-box {
-    background-color: #f8faf9;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    font-size: 0.82rem;
-}
-
-.rule-item {
-    color: var(--danger-red);
-    margin: 4px 0;
-    transition: color 0.2s ease;
-}
-
-.rule-item.valid {
-    color: var(--valid-green) !important;
-    font-weight: 600;
-}
-
 /* Form Styling */
 .standard-form {
     display: flex;
@@ -135,7 +166,7 @@ body {
     display: flex;
     flex-direction: column;
     font-size: 0.88rem;
-    gap: 4px;
+    gap: 6px;
 }
 
 .standard-form input, .grid-form input, .grid-form select {
@@ -161,7 +192,7 @@ body {
     background-color: #edf2f0;
     color: var(--text-muted);
     border: none;
-    padding: 10px 18px;
+    padding: 8px 14px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
@@ -169,20 +200,14 @@ body {
 
 .button-group { display: flex; gap: 10px; }
 
-/* Student Card Right Arrow Layout */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
+/* Lists & Tables */
 .student-list { display: flex; flex-direction: column; gap: 12px; }
 
 .student-item {
     border: 1px solid #e1ebe6;
     border-radius: 10px;
     overflow: hidden;
+    background-color: #ffffff;
 }
 
 .student-header {
@@ -195,189 +220,57 @@ body {
     font-weight: 600;
 }
 
-.arrow-icon {
-    width: 16px;
-    height: 16px;
-    stroke: var(--accent-slate-blue);
-    stroke-width: 2;
-    fill: none;
+.table-custom {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
 }
 
-.student-details { padding: 20px; background: white; border-top: 1px solid #e1ebe6; }
-.student-actions-wrapper { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-.delete-icon-btn { background: none; border: 1px solid #f0d0d0; color: var(--danger-red); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
-.student-photo-container { text-align: center; margin-bottom: 16px; }
-.student-photo-img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-mint); }
-.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.table-custom th, .table-custom td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
 
-/* Modal */
+body[dir="rtl"] .table-custom th, body[dir="rtl"] .table-custom td {
+    text-align: right;
+}
+
+/* Modals & Banners */
 .modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
 }
-.modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 380px; position: relative; }
+
+.modal-content { 
+    background: white; 
+    padding: 24px; 
+    border-radius: 12px; 
+    width: 90%; 
+    max-width: 550px; 
+    position: relative; 
+}
+
 .close-btn { position: absolute; top: 12px; right: 16px; font-size: 1.4rem; cursor: pointer; }
 
-/* Group Chat Floating Widget */
-#chat-widget { position: fixed; bottom: 50px; right: 20px; z-index: 1000; }
-
-/* 1. Updated FAB button styling with relative positioning */
-.chat-fab {
-    position: relative; /* Added to anchor the top-right badge */
-    width: 50px; 
-    height: 50px; 
-    border-radius: 50%; 
-    background: var(--accent-slate-blue);
-    color: white; 
-    border: none; 
-    font-size: 1.4rem; 
-    cursor: pointer; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-/* 2. NEW Badge CSS added right below .chat-fab */
-#chat-unread-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background-color: var(--danger-red, #e53e3e);
-    color: #ffffff;
-    font-size: 0.72rem;
-    font-weight: bold;
-    line-height: 1;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    border-radius: 9999px;
-    border: 2px solid var(--card-bg, #ffffff);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 10;
-}
-.chat-box {
-    width: 310px; height: 400px; background: white; border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
-    display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; right: 0;
-}
-.chat-header { background: var(--accent-slate-blue); color: white; padding: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-
-/* Chat Message Bubbles Layout */
-.chat-messages {
-    flex: 1;
-    padding: 12px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-color: #fafbfc;
-}
-
-.chat-msg {
-    max-width: 82%;
-    padding: 8px 12px;
-    border-radius: 12px;
+.alert-banner {
+    padding: 10px 14px;
+    border-radius: 8px;
     font-size: 0.85rem;
-    line-height: 1.4;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+    display: none;
 }
 
-/* Current user messages (Right aligned blue bubble) */
-.chat-msg.my-msg {
-    align-self: flex-end;
-    background-color: var(--accent-slate-blue);
-    color: #ffffff;
-    border-bottom-right-radius: 2px;
-    text-align: left;
+.alert-banner.error {
+    background-color: #fde8e8;
+    color: var(--danger-red);
+    border: 1px solid #f8b4b4;
 }
 
-/* Other users' messages (Left aligned light gray bubble) */
-.chat-msg.other-msg {
-    align-self: flex-start;
-    background-color: #edf2f7;
-    color: var(--text-primary);
-    border-bottom-left-radius: 2px;
-    text-align: left;
-}
-
-.msg-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.72rem;
-    margin-bottom: 4px;
-    opacity: 0.9;
-}
-
-.chat-msg.my-msg .msg-time {
-    color: #e2e8f0;
-}
-
-.chat-msg.other-msg .msg-time {
-    color: var(--text-muted);
-}
-
-.msg-body {
-    word-break: break-word;
-}
-
-.chat-input-row { display: flex; padding: 10px; border-top: 1px solid var(--border-color); background: #ffffff; gap: 6px; }
-.chat-input-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; }
-.chat-input-row button { margin-left: 0; }
-
-/* Bottom Medial Footer */
+/* Footer */
 .bottom-footer {
     position: fixed; bottom: 0; left: 0; width: 100%;
     background-color: #1a202c; color: #a0aec0; text-align: center;
     padding: 8px; font-size: 0.82rem; z-index: 900;
-}
-
-body[dir="rtl"] { direction: rtl; text-align: right; }
-
-/* Emoji Picker Styles */
-.emoji-toggle-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0 4px;
-    transition: transform 0.1s ease;
-}
-
-.emoji-toggle-btn:hover {
-    transform: scale(1.15);
-}
-
-.emoji-picker-container {
-    position: absolute;
-    bottom: 52px;
-    left: 10px;
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 8px;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1050;
-}
-
-.emoji-picker-container span {
-    font-size: 1.2rem;
-    cursor: pointer;
-    text-align: center;
-    border-radius: 4px;
-    padding: 2px;
-    transition: background 0.15s;
-}
-
-.emoji-picker-container span:hover {
-    background-color: #edf2f7;
-}
-
-.hidden {
-    display: none !important;
 }
