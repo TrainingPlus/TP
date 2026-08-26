@@ -1,121 +1,103 @@
-<!-- Top Navigation Header -->
-<nav class="top-nav">
-  <div class="nav-left">
-    <span style="font-weight:700; font-size:1.1rem;">Enterprise Portal</span>
-    <div class="search-container">
-      <input type="text" id="global-search" placeholder="Search system...">
-    </div>
-  </div>
-  <div class="nav-controls">
-    <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
-    <div id="user-avatar-badge" class="nav-btn hidden" style="border-radius:50%; width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; font-weight:bold;"></div>
-    <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
-  </div>
-</nav>
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Portal | Sign In</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-<!-- Main Container -->
-<div class="card-view">
+    <nav class="top-nav">
+        <div class="nav-left">
+            <span style="font-weight:700; font-size:1.1rem;">Company System</span>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
+        </div>
+    </nav>
 
-  <!-- Step 1: Role Selector -->
-  <div id="role-selection-screen">
-    <h2 style="margin-bottom: 20px; text-align:center;">Select Portal Access</h2>
-    <div style="display: flex; gap: 16px; justify-content: center;">
-      <button class="primary-btn" style="flex:1; padding:20px;" onclick="selectRole('manager')">Manager</button>
-      <button class="primary-btn" style="flex:1; padding:20px; background-color: var(--accent-slate-blue);" onclick="selectRole('operator')">Operator</button>
-      <button class="secondary-btn" style="flex:1; padding:20px;" onclick="selectRole('employee')">Employee</button>
-    </div>
-  </div>
+    <div class="card-view" style="max-width: 450px;">
+        <h2 style="text-align:center; margin-bottom: 20px;">System Login</h2>
 
-  <!-- Manager Portal -->
-  <div id="manager-portal" class="hidden">
-    <div class="tab-header">
-      <button class="tab-btn active" onclick="switchTab('mgr-approvals')">Pending Sign-Ins</button>
-      <button class="tab-btn" onclick="switchTab('mgr-courses')">Manage Courses</button>
-      <button class="tab-btn" onclick="switchTab('mgr-inspect')">Inspect Staff</button>
-      <button class="tab-btn" onclick="switchTab('mgr-settings')">Account Settings</button>
-    </div>
+        <div id="alert-box" class="alert-banner error"></div>
 
-    <!-- Manager Approvals Tab -->
-    <div id="mgr-approvals" class="tab-content">
-      <h3>Pending Employee Registrations</h3>
-      <div id="pending-users-list" class="student-list" style="margin-top:12px;"></div>
-    </div>
+        <label style="font-size: 0.88rem; margin-bottom: 8px; display: block; font-weight: 600;">Select Role:</label>
+        <div class="role-buttons">
+            <div class="role-btn" onclick="selectRole('manager', this)">Manager</div>
+            <div class="role-btn" onclick="selectRole('operator', this)">Operator</div>
+            <div class="role-btn" onclick="selectRole('employee', this)">Employee</div>
+        </div>
 
-    <!-- Manager Courses Tab -->
-    <div id="mgr-courses" class="tab-content hidden">
-      <form class="standard-form" onsubmit="addCourse(event)">
-        <label>Course Title: <input type="text" id="new-course-name" required></label>
-        <button class="primary-btn" type="submit">Add Course</button>
-      </form>
-      <div id="courses-list" class="student-list" style="margin-top:16px;"></div>
+        <form class="standard-form" onsubmit="handleSignIn(event)">
+            <label>Username
+                <input type="text" id="username" placeholder="Enter username" required>
+            </label>
+            <label>Password
+                <input type="password" id="password" placeholder="Enter password" required>
+            </label>
+            <button type="submit" class="primary-btn" style="margin-top:10px;">Sign In</button>
+        </form>
     </div>
 
-    <!-- Staff Inspection Tab -->
-    <div id="mgr-inspect" class="tab-content hidden">
-      <h3>Request View Access</h3>
-      <div id="staff-directory" class="student-list" style="margin-top:12px;"></div>
-    </div>
+    <div class="bottom-footer">© 2026 Management System Portal.</div>
 
-    <!-- Account Settings -->
-    <div id="mgr-settings" class="tab-content hidden">
-      <form class="standard-form" onsubmit="updateManagerProfile(event)">
-        <label>Username: <input type="text" id="mgr-username-input"></label>
-        <label>New Password: <input type="password" id="mgr-pass-input"></label>
-        <button class="primary-btn" type="submit">Update Profile</button>
-      </form>
-    </div>
-  </div>
+    <script src="script.js"></script>
+    <script>
+        let chosenRole = null;
 
-  <!-- Operator Portal -->
-  <div id="operator-portal" class="hidden">
-    <div class="dashboard-header">
-      <h2>Operator Controls</h2>
-      <button class="primary-btn" onclick="createNewClass()">+ Add Class</button>
-    </div>
+        function selectRole(role, element) {
+            chosenRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('alert-box').style.display = 'none';
+        }
 
-    <!-- Drag & Drop Class Reordering Area -->
-    <div id="classes-container" class="student-list"></div>
+        function handleSignIn(event) {
+            event.preventDefault();
+            const alertBox = document.getElementById('alert-box');
 
-    <!-- Selected Class Roster & Status Matrix -->
-    <div id="class-roster-modal" class="modal hidden">
-      <div class="modal-content" style="max-width: 600px;">
-        <span class="close-btn" onclick="closeRosterModal()">&times;</span>
-        <h3 id="modal-class-title">Class Roster</h3>
-        <button class="secondary-btn" style="margin: 10px 0;" onclick="exportToExcel()">Download Excel Sheet</button>
+            if (!chosenRole) {
+                alertBox.textContent = "Please select a role before signing in.";
+                alertBox.style.display = 'block';
+                return;
+            }
 
-        <table style="width:100%; border-collapse: collapse; margin-top:10px;">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--border-color); text-align:left;">
-              <th style="padding:8px;">Full Name</th>
-              <th style="padding:8px;">CPR</th>
-              <th style="padding:8px;">Tamkeen Status</th>
-            </tr>
-          </thead>
-          <tbody id="roster-table-body">
-            <!-- Dynamic Rows -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+            const username = document.getElementById('username').value.trim();
 
-  <!-- Employee Directory Link -->
-  <div id="employee-portal" class="hidden">
-    <h3>Employee Directory Access</h3>
-    <p style="color: var(--text-muted); margin-bottom:12px;">Your directory features, search filters, and profile registration tools are linked below.</p>
-    <div id="linked-directory-mount"></div>
-  </div>
+            // 1. Manager Single-Account Constraint
+            if (chosenRole === 'manager') {
+                if (localStorage.getItem('active_manager_session') === 'true') {
+                    alertBox.textContent = "You are not the manager. Only one manager can sign in.";
+                    alertBox.style.display = 'block';
+                    return;
+                }
+                localStorage.setItem('active_manager_session', 'true');
+            }
 
-</div>
+            // 2. Operator Single-Account Constraint
+            if (chosenRole === 'operator') {
+                if (localStorage.getItem('active_operator_session') === 'true') {
+                    alertBox.textContent = "You are not an operator. Only one operator can sign in.";
+                    alertBox.style.display = 'block';
+                    return;
+                }
+                localStorage.setItem('active_operator_session', 'true');
+            }
 
-<!-- Inspection Consent Toast Modal for Employees -->
-<div id="inspection-request-modal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Manager Access Request</h3>
-    <p style="margin: 12px 0; font-size: 0.9rem;">The manager has requested permission to view your active workspace page.</p>
-    <div class="button-group">
-      <button class="primary-btn" onclick="respondToInspection(true)">Allow Access</button>
-      <button class="secondary-btn" onclick="respondToInspection(false)">Decline</button>
-    </div>
-  </div>
-</div>
+            // 3. Employee Approval Notification Rule
+            if (chosenRole === 'employee') {
+                sendEmailNotification("Manager", `Employee ${username} attempted sign-in. Pending acceptance.`);
+                alert("Sign-in email sent to Manager. You cannot use the system until accepted.");
+            }
+
+            // Save Session
+            localStorage.setItem('current_user_name', username);
+            localStorage.setItem('current_user_role', chosenRole);
+
+            // Redirect to appropriate separate file
+            window.location.href = `${chosenRole}.html`;
+        }
+    </script>
+</body>
+</html>
