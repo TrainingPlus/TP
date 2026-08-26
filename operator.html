@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- SheetJS CDN for Excel Download -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <div class="nav-left">
+            <span style="font-weight:700;">Operator Panel</span>
+            <div class="search-container">
+                <input type="text" placeholder="Search classes...">
+            </div>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
+            <div id="user-avatar-badge" class="avatar-icon">O</div>
+            <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="card-view">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2>Manage Classes</h2>
+            <button class="primary-btn" onclick="addClass()">+ Add Class</button>
+        </div>
+
+        <p style="font-size:0.85rem; color: var(--text-muted); margin-bottom:12px;">Drag and drop classes to reorder them:</p>
+
+        <!-- Drag & Drop Class List -->
+        <div id="class-container" class="student-list">
+            <div class="student-item" draggable="true" ondragstart="drag(event)" ondragover="allowDrop(event)" ondrop="drop(event)" id="class-1">
+                <div class="student-header">
+                    <span>Web Engineering - Class A</span>
+                    <div>
+                        <button class="secondary-btn" onclick="openClass('Class A')">Open Roster</button>
+                        <button class="secondary-btn" style="color:var(--danger-red)" onclick="this.parentElement.parentElement.parentElement.remove()">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Roster Modal -->
+    <div id="roster-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title">Class Roster</h3>
+            <button class="primary-btn" style="margin:12px 0;" onclick="exportExcel()">Download Excel Sheet</button>
+
+            <table class="table-custom" id="roster-table">
+                <thead>
+                    <tr>
+                        <th>Student Full Name</th>
+                        <th>CPR</th>
+                        <th>Tamkeen Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ali Hassan</td>
+                        <td>980123456</td>
+                        <td>
+                            <select>
+                                <option value="accepted">Accepted</option>
+                                <option value="under_processing" selected>Under Processing</option>
+                                <option value="withdrawn">Withdrawn</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bottom-footer">© 2026 Management System Portal.</div>
+
+    <script src="script.js"></script>
+    <script>
+        checkAccess('operator');
+
+        function addClass() {
+            const name = prompt("Enter Class Name:");
+            if (!name) return;
+
+            const div = document.createElement('div');
+            div.className = 'student-item';
+            div.draggable = true;
+            div.ondragstart = drag;
+            div.ondragover = allowDrop;
+            div.ondrop = drop;
+            div.id = 'class-' + Date.now();
+            div.innerHTML = `
+                <div class="student-header">
+                    <span>${name}</span>
+                    <div>
+                        <button class="secondary-btn" onclick="openClass('${name}')">Open Roster</button>
+                        <button class="secondary-btn" style="color:var(--danger-red)" onclick="this.parentElement.parentElement.parentElement.remove()">Delete</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('class-container').appendChild(div);
+
+            sendEmailNotification("Employees", `A new class is open: ${name}`);
+        }
+
+        // Drag & Drop Handlers
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+        function drop(ev) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            const draggedEl = document.getElementById(data);
+            const dropTarget = ev.target.closest('.student-item');
+            if (dropTarget && draggedEl !== dropTarget) {
+                dropTarget.parentNode.insertBefore(draggedEl, dropTarget);
+            }
+        }
+
+        function openClass(className) {
+            document.getElementById('modal-title').innerText = className + " Roster";
+            document.getElementById('roster-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('roster-modal').classList.add('hidden');
+        }
+
+        function exportExcel() {
+            const table = document.getElementById("roster-table");
+            const wb = XLSX.utils.table_to_book(table);
+            XLSX.writeFile(wb, "Class_Data.xlsx");
+        }
+    </script>
+</body>
+</html>
