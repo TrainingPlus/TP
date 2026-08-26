@@ -1,12 +1,22 @@
-// 1. Firebase Initialization (Replace with your Firebase Config keys)
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA58jJ5fce4eq-_JXLSqPG0L4N1Or_dsFA",
+  authDomain: "training-plus-ddad8.firebaseapp.com",
+  projectId: "training-plus-ddad8",
+  storageBucket: "training-plus-ddad8.firebasestorage.app",
+  messagingSenderId: "643408108318",
+  appId: "1:643408108318:web:f87bf140ec5a3c28a0470f",
+  measurementId: "G-METCYLGB3F"
 };
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+// Global references for your app
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
