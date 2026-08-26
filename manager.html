@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="top-nav">
+        <div class="nav-left">
+            <span style="font-weight:700;">Manager Control Panel</span>
+            <div class="search-container">
+                <input type="text" placeholder="Search employees/courses...">
+            </div>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
+            <div id="user-avatar-badge" class="avatar-icon">M</div>
+            <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="card-view">
+        <div class="tab-header">
+            <button class="tab-btn active" onclick="switchTab('tab-approvals')">Pending Sign-Ins</button>
+            <button class="tab-btn" onclick="switchTab('tab-staff')">Manage Employees</button>
+            <button class="tab-btn" onclick="switchTab('tab-courses')">Manage Courses</button>
+            <button class="tab-btn" onclick="switchTab('tab-settings')">Account Settings</button>
+        </div>
+
+        <!-- Approvals Tab -->
+        <div id="tab-approvals" class="tab-content">
+            <h3>Pending Employee Sign-Ins</h3>
+            <div class="student-list" style="margin-top: 16px;">
+                <div class="student-item">
+                    <div class="student-header">
+                        <span>Sara Ahmed (sara@company.com)</span>
+                        <div class="button-group">
+                            <button class="primary-btn" onclick="acceptEmployee(this)">Accept</button>
+                            <button class="secondary-btn" onclick="this.parentElement.parentElement.parentElement.remove()">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Tab with Inspection Request -->
+        <div id="tab-staff" class="tab-content hidden">
+            <h3>Employee Directory (Inspect Work)</h3>
+            <div class="student-list" style="margin-top: 16px;">
+                <div class="student-item">
+                    <div class="student-header" onclick="requestInspect('Sara Ahmed')">
+                        <span>Sara Ahmed - Developer</span>
+                        <button class="secondary-btn">Request Access to View Page</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Courses Tab -->
+        <div id="tab-courses" class="tab-content hidden">
+            <form class="standard-form" onsubmit="addCourse(event)">
+                <label>Add New Course
+                    <input type="text" id="course-name" placeholder="Course Name" required>
+                </label>
+                <button type="submit" class="primary-btn">Add & Notify Employees</button>
+            </form>
+            <ul id="course-list" style="margin-top:16px; padding-left: 20px;">
+                <li>Web Engineering <button class="secondary-btn" style="color:red;" onclick="this.parentElement.remove()">Delete</button></li>
+            </ul>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="tab-settings" class="tab-content hidden">
+            <form class="standard-form" onsubmit="updateProfile(event)">
+                <label>Manager Username
+                    <input type="text" id="mgr-username" value="ManagerAdmin">
+                </label>
+                <label>Change Password
+                    <input type="password" id="mgr-password" placeholder="New Password">
+                </label>
+                <button type="submit" class="primary-btn">Update Credentials</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bottom-footer">© 2026 Management System Portal.</div>
+
+    <script src="script.js"></script>
+    <script>
+        checkAccess('manager');
+
+        function acceptEmployee(btn) {
+            btn.innerText = "Accepted";
+            btn.disabled = true;
+            sendEmailNotification("Employee", "Your sign-in request was accepted by the Manager.");
+        }
+
+        function requestInspect(username) {
+            sendEmailNotification(username, "The Manager wants to see your page.");
+            alert(`Email sent to ${username} asking for permission to view their page.`);
+        }
+
+        function addCourse(e) {
+            e.preventDefault();
+            const name = document.getElementById('course-name').value;
+            const li = document.createElement('li');
+            li.innerHTML = `${name} <button class="secondary-btn" style="color:red;" onclick="this.parentElement.remove()">Delete</button>`;
+            document.getElementById('course-list').appendChild(li);
+            document.getElementById('course-name').value = '';
+
+            sendEmailNotification("All Employees", `New course open: ${name}`);
+        }
+
+        function updateProfile(e) {
+            e.preventDefault();
+            alert("Profile updated successfully!");
+        }
+    </script>
+</body>
+</html>
