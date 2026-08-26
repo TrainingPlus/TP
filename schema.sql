@@ -1,34 +1,33 @@
-CREATE DATABASE IF NOT EXISTS training_plus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE training_plus;
+CREATE DATABASE IF NOT EXISTS training_plus_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE training_plus_db;
+
+-- Users / Employees Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('manager', 'operator', 'employee') DEFAULT 'employee',
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'approved',
+    uid VARCHAR(128) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    display_name VARCHAR(150),
+    role ENUM('employee', 'manager') DEFAULT 'employee',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
 
+-- Student CPR Records Table
 CREATE TABLE IF NOT EXISTS students (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) DEFAULT 'New Student',
-    cpr VARCHAR(9) UNIQUE NOT NULL,
-    gender VARCHAR(10) DEFAULT 'male',
-    email VARCHAR(255) DEFAULT '',
-    status VARCHAR(50) DEFAULT 'student',
-    courses TEXT,
-    comments TEXT DEFAULT NULL,
-    ministry VARCHAR(10) DEFAULT 'no',
-    degree VARCHAR(50) DEFAULT 'high-school',
-    photo VARCHAR(255) DEFAULT '',
-    added_by VARCHAR(100) DEFAULT 'Admin',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    cpr VARCHAR(9) NOT NULL UNIQUE,
+    full_name VARCHAR(150),
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    created_by_uid VARCHAR(128),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by_uid) REFERENCES users(uid) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS group_messages (
+-- Team Chat Logs
+CREATE TABLE IF NOT EXISTS chat_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
+    sender_uid VARCHAR(128) NOT NULL,
+    sender_name VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
