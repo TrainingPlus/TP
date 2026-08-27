@@ -1,39 +1,40 @@
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// ==========================================
+// 1. FIREBASE CONFIGURATION
+// ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyA58jJ5fce4eq-_JXLSqPG0L4N1Or_dsFA",
-  authDomain: "training-plus-ddad8.firebaseapp.com",
-  projectId: "training-plus-ddad8",
-  storageBucket: "training-plus-ddad8.firebasestorage.app",
-  messagingSenderId: "643408108318",
-  appId: "1:643408108318:web:f87bf140ec5a3c28a0470f",
-  measurementId: "G-METCYLGB3F"
+    apiKey: "AIzaSyCzTs_zw28wkHij4Jj9-EEW3XOpQ5si2yc",
+    authDomain: "training-plus-212a2.firebaseapp.com",
+    projectId: "training-plus-212a2",
+    storageBucket: "training-plus-212a2.firebasestorage.app",
+    messagingSenderId: "330136803727",
+    appId: "1:330136803727:web:3013a358a547a112ff93fa",
+    measurementId: "G-FX3XRSLD8W"
 };
-
-// Initialize Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-
-// Global references for your app
-const auth = firebase.auth();
-const db = firebase.firestore();
 
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let currentUser = null;
-let currentRole = "employee";
-let currentLang = "EN";
+let currentUserData = null;
+let studentList = [];
+let currentLang = 'en';
+// Track initial page load time to prevent old unread badge alerts
+const pageLoadedAt = new Date();
 
-// Translation Dictionary
-const i18n = {
-    EN: {
-        welcome_title: "Welcome Back",
-        welcome_subtitle: "Sign in with your Google account to access the Directory",
+// ==========================================
+// 2. LANGUAGE TRANSLATIONS (ENGLISH / ARABIC)
+// ==========================================
+const translations = {
+    en: {
+        search_placeholder: "Search by name or CPR...",
+        download_all: "Download All (Excel)",
+        account: "Account",
+        logout: "Logout",
+        welcome_title: "Welcome",
+        welcome_subtitle: "Sign in to access the Training Plus Student Directory",
+        btn_google: "Sign in with Google",
         student_directory: "Student Directory",
         add_new_cpr: "+ Add New CPR",
         register_cpr: "Register New CPR",
@@ -45,237 +46,888 @@ const i18n = {
         cpr_success_subtitle: "Would you like to add another student CPR record?",
         btn_add_another: "+ Add Another CPR",
         btn_go_directory: "Go to Directory",
+        modal_account_title: "User Account",
+        lbl_user_id: "User ID:",
+        lbl_username: "Username:",
+        lbl_email: "Email:",
         chat_header: "Team Group Chat",
-        search_placeholder: "Search by CPR...",
-        btn_send: "Send"
+        chat_placeholder: "Type a message...",
+        btn_send: "Send",
+        btn_download_excel: "Download Excel",
+        btn_delete_student: "Delete Student",
+        lbl_full_name: "Full Name:",
+        lbl_cpr: "CPR:",
+        lbl_gender: "Gender:",
+        opt_male: "Male",
+        opt_female: "Female",
+        lbl_cv_doc: "Student CV Document",
+        btn_upload_cv: "Upload CV",
+        btn_view_cv: "📄 View / Download CV",
+        btn_delete_cv: "Delete CV",
+        lbl_no_cv: "No CV uploaded",
+        lbl_enrolled_courses: "Enrolled Courses",
+        ph_course: "Enter course name (e.g. Web Development)",
+        btn_add_course: "+ Add Course",
+        btn_delete_course: "Delete Course",
+        lbl_no_courses: "No courses added yet.",
+        lbl_no_students: "No student records found.",
+        lbl_student_number: "Student Number:",
+        lbl_major: "Major:"
     },
-    AR: {
+    ar: {
+        search_placeholder: "البحث بالاسم أو الرقم الشخصي...",
+        download_all: "تحميل الكل (إكسل)",
+        account: "الحساب",
+        logout: "تسجيل الخروج",
         welcome_title: "مرحباً بك",
-        welcome_subtitle: "سجل الدخول بحساب Google للوصول إلى دليل الطلاب",
+        welcome_subtitle: "سجل الدخول للوصول إلى دليل طلاب ترينينج بلس",
+        btn_google: "تسجيل الدخول باستخدام جوجل",
         student_directory: "دليل الطلاب",
         add_new_cpr: "+ إضافة رقم شخصي جديد",
         register_cpr: "تسجيل رقم شخصي جديد",
-        register_cpr_subtitle: "أدخل الرقم الشخصي (9 أرقام) لإضافة الطالب.",
+        register_cpr_subtitle: "أدخل الرقم الشخصي المكون من 9 أرقام لإضافة طالب.",
         cpr_label: "الرقم الشخصي (9 أرقام):",
-        btn_submit: "إرسال البيانات",
-        btn_back: "عودة / إنتهاء",
-        cpr_success_title: "تم إضافة الرقم الشخصي بنجاح!",
-        cpr_success_subtitle: "هل ترغب في إضافة سجل رقم شخصي آخر؟",
+        btn_submit: "إرسال السجل",
+        btn_back: "تم / العودة",
+        cpr_success_title: "تمت إضافة الرقم الشخصي بنجاح!",
+        cpr_success_subtitle: "هل ترغب في إضافة سجل طالب آخر؟",
         btn_add_another: "+ إضافة رقم شخصي آخر",
-        btn_go_directory: "الانتقال للدليل",
-        chat_header: "محادثة الفريق",
-        search_placeholder: "البحث عن طريق الرقم الشخصي...",
-        btn_send: "إرسال"
+        btn_go_directory: "الانتقال إلى الدليل",
+        modal_account_title: "حساب المستخدم",
+        lbl_user_id: "معرف المستخدم:",
+        lbl_username: "اسم المستخدم:",
+        lbl_email: "البريد الإلكتروني:",
+        chat_header: "محادثة الفريق الجماعية",
+        chat_placeholder: "اكتب رسالة...",
+        btn_send: "إرسال",
+        btn_download_excel: "تحميل إكسل",
+        btn_delete_student: "حذف الطالب",
+        lbl_full_name: "الاسم الكامل:",
+        lbl_cpr: "الرقم الشخصي:",
+        lbl_gender: "الجنس:",
+        opt_male: "ذكر",
+        opt_female: "أنثى",
+        lbl_cv_doc: "مستند السيرة الذاتية للطالب",
+        btn_upload_cv: "رفع السيرة الذاتية",
+        btn_view_cv: "📄 عرض / تحميل السيرة الذاتية",
+        btn_delete_cv: "حذف السيرة الذاتية",
+        lbl_no_cv: "لم يتم رفع سيرة ذاتية",
+        lbl_enrolled_courses: "الدورات المسجلة",
+        ph_course: "أدخل اسم الدورة (مثال: تطوير الويب)",
+        btn_add_course: "+ إضافة دورة",
+        btn_delete_course: "حذف الدورة",
+        lbl_no_courses: "لم يتم إضافة دورات بعد.",
+        lbl_no_students: "لم يتم العثور على سجلات للطلاب.",
+        lbl_student_number: "الرقم الجامعي:",
+        lbl_major: "التخصص:"
     }
 };
 
-// 2. Auth State Observer
-auth.onAuthStateChanged(async (user) => {
+function toggleLanguage() {
+    currentLang = (currentLang === 'en') ? 'ar' : 'en';
+    document.documentElement.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
+    applyLanguageTranslations();
+    renderStudentDirectory(studentList);
+}
+
+function applyLanguageTranslations() {
+    const langObj = translations[currentLang];
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (langObj[key]) el.innerText = langObj[key];
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (langObj[key]) el.placeholder = langObj[key];
+    });
+}
+
+// Monitor Auth State
+auth.onAuthStateChanged((user) => {
     if (user) {
-        currentUser = user;
-        document.getElementById("search-box")?.classList.remove("hidden");
-        document.getElementById("account-btn")?.classList.remove("hidden");
-        document.getElementById("logout-btn")?.classList.remove("hidden");
-        document.getElementById("download-all-btn")?.classList.remove("hidden");
-        
-        await syncUserWithBackend(user);
-        showView("view-home");
-        loadStudents();
-        listenToChat();
+        currentUserData = user;
+        updateUserUI(true);
+        listenToStudentDirectory();
+        listenToGroupChat();
     } else {
-        currentUser = null;
-        showView("view-auth");
-        document.getElementById("search-box")?.classList.add("hidden");
-        document.getElementById("account-btn")?.classList.add("hidden");
-        document.getElementById("logout-btn")?.classList.add("hidden");
-        document.getElementById("download-all-btn")?.classList.add("hidden");
+        currentUserData = null;
+        updateUserUI(false);
     }
 });
 
-// Google Authentication
-function signInWithGoogle() {
+// ==========================================
+// 3. USER UI & AUTH UPDATES (WITH ROLE INTEGRATION)
+// ==========================================
+
+// Dedicated Google Sign-In for Employee Role
+async function signInWithGoogleEmployee() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch((err) => alert("Sign in failed: " + err.message));
-}
-
-function logoutUser() {
-    auth.signOut();
-}
-
-async function syncUserWithBackend(user) {
     try {
-        const response = await fetch("api.php?action=sync_user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName || "Employee"
-            })
-        });
-        const res = await response.json();
-        if (res.status === "success") {
-            currentRole = res.role;
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+
+        // Session storage setup for system navigation
+        localStorage.setItem('current_user_name', user.displayName || user.email.split('@')[0]);
+        localStorage.setItem('current_user_role', 'employee');
+
+        // Store user credentials in Firestore collection
+        await db.collection('users').doc(user.uid).set({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            role: 'employee',
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Redirect directly to employee view
+        window.location.href = 'employee.html';
+    } catch (error) {
+        console.error("Employee Google Sign-In Error:", error);
+        const alertBox = document.getElementById('alert-box');
+        if (alertBox) {
+            alertBox.textContent = "Google Sign-In Failed: " + error.message;
+            alertBox.style.display = 'block';
+        } else {
+            alert("Sign-In Failed: " + error.message);
         }
-    } catch (e) {
-        console.error("User Sync Error:", e);
     }
 }
 
-// 3. View Management
-function showView(viewId) {
-    document.querySelectorAll(".card-view").forEach(el => el.classList.add("hidden"));
-    document.getElementById(viewId)?.classList.remove("hidden");
+// Default Google Sign-In Function
+async function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        await auth.signInWithPopup(provider);
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        alert("Sign-In Failed: " + error.message);
+    }
 }
 
-function resetAndAddAnotherCPR() {
-    document.getElementById("cpr-input").value = "";
-    showView("view-add-cpr");
+function updateUserUI(isLoggedIn) {
+    document.getElementById('search-box')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('download-all-btn')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('account-btn')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('logout-btn')?.classList.toggle('hidden', !isLoggedIn);
+
+    if (isLoggedIn && currentUserData) {
+        const idEl = document.getElementById('modal-userid');
+        const nameEl = document.getElementById('modal-username');
+        const emailEl = document.getElementById('modal-email');
+
+        const simpleUserId = currentUserData.uid 
+            ? `#USR-${currentUserData.uid.substring(0, 6).toUpperCase()}`
+            : '#10001';
+
+        if (idEl) idEl.innerText = simpleUserId;
+        if (nameEl) nameEl.innerText = currentUserData.displayName || currentUserData.email?.split('@')[0] || "User";
+        if (emailEl) emailEl.innerText = currentUserData.email || '';
+
+        showView('view-home');
+    } else {
+        showView('view-auth');
+    }
 }
 
-// 4. CPR Operations
+function logoutUser() {
+    const role = localStorage.getItem('current_user_role');
+    
+    // Clear Session lock flags upon logout
+    if (role === 'manager') localStorage.removeItem('active_manager_session');
+    if (role === 'operator') localStorage.removeItem('active_operator_session');
+    
+    localStorage.removeItem('current_user_name');
+    localStorage.removeItem('current_user_role');
+
+    auth.signOut().then(() => {
+        window.location.href = 'index.html';
+    });
+}
+
+// ==========================================
+// 4. CPR RECORD MANAGEMENT
+// ==========================================
 async function addStudentCPR() {
-    const cpr = document.getElementById("cpr-input").value.trim();
-    if (!/^\d{9}$/.exec(cpr)) {
-        alert("Please enter a valid 9-digit CPR number.");
+    const cprInput = document.getElementById('cpr-input');
+    if (!cprInput) return;
+
+    const cpr = cprInput.value.trim();
+
+    // 1. Validate 9-digit CPR format
+    if (!/^\d{9}$/.test(cpr)) {
+        const errorMsg = (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang].alert_cpr_length) 
+            ? translations[currentLang].alert_cpr_length 
+            : "CPR must be exactly 9 digits.";
+        alert(errorMsg);
         return;
     }
 
     try {
-        const response = await fetch("api.php?action=add_cpr", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ cpr: cpr, uid: currentUser.uid })
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+            alert("You must be logged in to add a CPR.");
+            return;
+        }
+
+        const accountUsername = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : "User");
+        const currentUid = currentUser.uid;
+        const currentEmail = currentUser.email;
+
+        const docRef = db.collection("students").doc(cpr);
+        const docSnap = await docRef.get();
+
+        // 2. Check if CPR already exists
+        if (docSnap.exists) {
+            const existingData = docSnap.data();
+            
+            const creatorUid = existingData.createdByUid;
+            const creatorEmail = existingData.createdByEmail || existingData.added_by;
+
+            // Check if added by current user
+            const isMyRecord = (creatorUid && creatorUid === currentUid) || 
+                               (creatorEmail && creatorEmail === currentEmail);
+
+            if (isMyRecord) {
+                alert(`This CPR (${cpr}) is already registered by you.`);
+            } else {
+                let username = existingData.createdByName || 
+                               existingData.username || 
+                               existingData.name || 
+                               existingData.added_by_name;
+
+                if (!username || username === "User") {
+                    const rawEmail = existingData.createdByEmail || existingData.added_by || existingData.email;
+                    if (rawEmail && rawEmail.includes('@')) {
+                        username = rawEmail.split('@')[0];
+                    } else if (rawEmail) {
+                        username = rawEmail;
+                    } else {
+                        username = "Mada Saleh";
+                    }
+                }
+
+                alert(`This CPR (${cpr}) is already registered by user: ${username}`);
+            }
+            return;
+        }
+
+        // 3. Save new record storing current user's name
+        await docRef.set({
+            cpr: cpr,
+            studentNumber: cpr,
+            major: "N/A",
+            phone: "N/A",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdByUid: currentUid,
+            createdByEmail: currentEmail,
+            createdByName: accountUsername,
+            added_by: currentEmail
         });
-        const res = await response.json();
-        if (res.status === "success") {
-            showView("view-cpr-success");
-        } else {
-            alert(res.message);
-        }
-    } catch (e) {
-        alert("Error submitting CPR record.");
+
+        cprInput.value = '';
+        showView('view-cpr-success');
+
+    } catch (error) {
+        console.error("Error processing CPR addition:", error);
+        alert("Failed to process request: " + error.message);
     }
 }
 
-async function loadStudents() {
-    const container = document.getElementById("student-container");
-    if (!container) return;
-
-    try {
-        const response = await fetch("api.php?action=get_students");
-        const res = await response.json();
-        
-        if (res.status === "success") {
-            container.innerHTML = res.data.map(student => `
-                <div class="student-card" style="padding: 12px; margin-bottom: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: var(--bg-card);">
-                    <strong>CPR:</strong> ${student.cpr} 
-                    <span style="float: right; font-size: 0.8rem; color: #64748b;">${new Date(student.created_at).toLocaleDateString()}</span>
-                </div>
-            `).join("");
-        }
-    } catch (e) {
-        container.innerHTML = "<p>Error loading student records.</p>";
+function resetAndAddAnotherCPR() {
+    const cprInput = document.getElementById('cpr-input');
+    if (cprInput) {
+        cprInput.value = '';
     }
+    showView('view-add-cpr');
+    setTimeout(() => {
+        if (cprInput) cprInput.focus();
+    }, 100);
 }
 
-// 5. Team Chat (Firestore Real-time)
-function toggleChatWindow() {
-    document.getElementById("chat-window")?.classList.toggle("hidden");
-}
+// ==========================================
+// 5. STUDENT DIRECTORY & EXCEL EXPORTS
+// ==========================================
+function listenToStudentDirectory() {
+    if (!currentUserData) return;
+    const currentUid = currentUserData.uid;
+    const activeEmail = currentUserData.email;
+    const activeName = currentUserData.displayName;
 
-function toggleEmojiPicker() {
-    document.getElementById("emoji-picker")?.classList.toggle("hidden");
-}
-
-function insertEmoji(emoji) {
-    const chatInput = document.getElementById("chat-input");
-    if (chatInput) {
-        chatInput.value += emoji;
-        document.getElementById("emoji-picker")?.classList.add("hidden");
-    }
-}
-
-function listenToChat() {
-    db.collection("chat_messages").orderBy("timestamp", "asc").onSnapshot(snapshot => {
-        const messagesBox = document.getElementById("chat-messages");
-        if (!messagesBox) return;
-
-        messagesBox.innerHTML = "";
+    db.collection('students').onSnapshot((snapshot) => {
+        studentList = [];
         snapshot.forEach(doc => {
             const data = doc.data();
-            const isMe = currentUser && currentUser.uid === data.sender_uid;
-            messagesBox.innerHTML += `
-                <div style="text-align: ${isMe ? 'right' : 'left'}; margin-bottom: 8px;">
-                    <div style="font-size: 0.75rem; color: #64748b;">${data.sender_name}</div>
-                    <div style="display: inline-block; padding: 6px 12px; border-radius: 12px; background: ${isMe ? '#2b6cb0' : '#e2e8f0'}; color: ${isMe ? '#fff' : '#000'}; font-size: 0.9rem;">
-                        ${data.message}
+            
+            const isMine = (data.createdByUid && data.createdByUid === currentUid) ||
+                           (data.added_by && data.added_by === activeEmail) ||
+                           (data.added_by && data.added_by === activeName) ||
+                           (data.createdByEmail && data.createdByEmail === activeEmail);
+
+            if (isMine) {
+                studentList.push({ id: doc.id, ...data });
+            }
+        });
+
+        renderStudentDirectory(studentList);
+    }, (error) => {
+        console.error("Error fetching student directory:", error);
+    });
+}
+
+function handleSearch() {
+    const q = document.getElementById('search-input')?.value.toLowerCase().trim() || "";
+    const filtered = studentList.filter(s => 
+        (s.name && s.name.toLowerCase().includes(q)) || 
+        (s.cpr && s.cpr.includes(q)) ||
+        (s.studentNumber && s.studentNumber.toLowerCase().includes(q)) ||
+        (s.major && s.major.toLowerCase().includes(q))
+    );
+    renderStudentDirectory(filtered);
+}
+
+function downloadAllStudentsData() {
+    if (studentList.length === 0) {
+        alert("No student data available to download.");
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert("Excel export library is loading, please try again in a second.");
+        return;
+    }
+
+    const studentsRows = studentList.map(s => {
+        const courseNames = Array.isArray(s.courses) ? s.courses.map(c => c.name).join(', ') : 'None';
+        return {
+            "Full Name": s.name || '',
+            "Student Number": s.studentNumber || '',
+            "Major": s.major || '',
+            "CPR": s.cpr || '',
+            "Gender": s.gender || '',
+            "Email": s.email || '',
+            "Enrolled Courses": courseNames,
+            "CV Status": s.cvUrl ? 'Uploaded' : 'No CV',
+            "Added By": s.added_by || s.createdByName || ''
+        };
+    });
+
+    const courseRows = [];
+    studentList.forEach(s => {
+        if (Array.isArray(s.courses) && s.courses.length > 0) {
+            s.courses.forEach(c => {
+                courseRows.push({
+                    "Student Name": s.name || '',
+                    "CPR": s.cpr || '',
+                    "Course Name": c.name || '',
+                    "Date Added": c.addedAt || ''
+                });
+            });
+        }
+    });
+
+    const wb = XLSX.utils.book_new();
+    const wsStudents = XLSX.utils.json_to_sheet(studentsRows);
+    XLSX.utils.book_append_sheet(wb, wsStudents, "All Students");
+
+    if (courseRows.length > 0) {
+        const wsCourses = XLSX.utils.json_to_sheet(courseRows);
+        XLSX.utils.book_append_sheet(wb, wsCourses, "Course Details");
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `All_Students_Data_${todayStr}.xlsx`);
+}
+
+function downloadSingleStudentData(studentId) {
+    const student = studentList.find(s => s.id === studentId);
+    if (!student) {
+        alert("Student record not found.");
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert("Excel export library is loading, please try again in a second.");
+        return;
+    }
+
+    const recordRows = [
+        ["STUDENT RECORD INFORMATION", ""],
+        ["Full Name", student.name || 'N/A'],
+        ["Student Number", student.studentNumber || 'N/A'],
+        ["Major", student.major || 'N/A'],
+        ["CPR", student.cpr || 'N/A'],
+        ["Gender", student.gender || 'N/A'],
+        ["Email", student.email || 'N/A'],
+        ["Added By", student.added_by || student.createdByName || 'N/A'],
+        ["CV Upload Status", student.cvUrl ? `Uploaded (${student.cvName || 'File'})` : 'No CV Uploaded'],
+        ["", ""],
+        ["ENROLLED COURSES", "ADDED DATE"]
+    ];
+
+    if (Array.isArray(student.courses) && student.courses.length > 0) {
+        student.courses.forEach(c => {
+            recordRows.push([c.name, c.addedAt || '']);
+        });
+    } else {
+        recordRows.push(["No courses enrolled", ""]);
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(recordRows);
+    XLSX.utils.book_append_sheet(wb, ws, "Student Details");
+
+    XLSX.writeFile(wb, `Student_${student.cpr || studentId}.xlsx`);
+}
+
+function renderStudentDirectory(list) {
+    const container = document.getElementById('student-container');
+    if (!container) return;
+    container.innerHTML = "";
+
+    const t = (typeof translations !== 'undefined' && translations[currentLang]) 
+        ? translations[currentLang] 
+        : {
+            lbl_no_students: "No student records found.",
+            btn_delete_course: "Delete Course",
+            lbl_no_courses: "No courses added yet.",
+            btn_view_cv: "📄 View / Download CV",
+            btn_delete_cv: "Delete CV",
+            lbl_no_cv: "No CV uploaded",
+            btn_download_excel: "Download Excel",
+            btn_delete_student: "Delete Student",
+            lbl_full_name: "Full Name:",
+            lbl_student_number: "Student Number:",
+            lbl_major: "Major:",
+            lbl_cpr: "CPR:",
+            lbl_gender: "Gender:",
+            opt_male: "Male",
+            opt_female: "Female",
+            lbl_email: "Email:",
+            lbl_cv_doc: "Student CV Document",
+            btn_upload_cv: "Upload CV",
+            lbl_enrolled_courses: "Enrolled Courses",
+            ph_course: "Enter course name",
+            btn_add_course: "+ Add Course"
+        };
+
+    if (list.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:#a0aec0; padding:20px;">${t.lbl_no_students}</p>`;
+        return;
+    }
+
+    list.forEach((student) => {
+        const item = document.createElement('div');
+        item.className = "student-item";
+
+        let coursesHTML = "";
+        if (student.courses && Array.isArray(student.courses) && student.courses.length > 0) {
+            coursesHTML = student.courses.map((c, index) => `
+                <li style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
+                    <div>
+                        <strong style="color: #2d3748;">${escapeHTML(c.name)}</strong> 
+                        <span style="color:#718096; margin-left:8px; font-size:0.80rem;">(${c.addedAt})</span>
+                    </div>
+                    <button type="button" onclick="removeCourse('${student.id}', ${index})" 
+                        style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px; transition: all 0.2s;" 
+                        onmouseover="this.style.background='#fee2e2'" 
+                        onmouseout="this.style.background='#fff5f5'"
+                    >
+                        ${t.btn_delete_course}
+                    </button>
+                </li>
+            `).join("");
+        } else {
+            coursesHTML = `<p style="font-size:0.82rem; color:#a0aec0; margin-top:4px;">${t.lbl_no_courses}</p>`;
+        }
+
+        const cvDisplay = student.cvUrl 
+            ? `<div style="display: flex; align-items: center; gap: 8px;">
+                <a href="${student.cvUrl}" download="${student.cvName || 'Student_CV'}" target="_blank" style="color:var(--accent-slate-blue, #2b6cb0); font-weight:600; text-decoration:underline; font-size:0.85rem;">${t.btn_view_cv}</a>
+                <button type="button" onclick="deleteStudentCV('${student.id}')" 
+                    style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px; transition: all 0.2s;" 
+                    onmouseover="this.style.background='#fee2e2'" 
+                    onmouseout="this.style.background='#fff5f5'"
+                >
+                    ${t.btn_delete_cv}
+                </button>
+               </div>`
+            : `<span style="color:#a0aec0; font-size:0.85rem;">${t.lbl_no_cv}</span>`;
+
+        item.innerHTML = `
+            <div class="student-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                <span>${escapeHTML(student.name)} (${escapeHTML(student.cpr)})</span>
+                <svg class="arrow-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="student-details hidden">
+                <div class="student-actions-wrapper" style="display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 12px;">
+                    <button class="nav-btn" onclick="downloadSingleStudentData('${student.id}')" style="background: #edf2f7; border: 1px solid #cbd5e0; color: #2d3748; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">${t.btn_download_excel}</button>
+                    <button class="delete-icon-btn" onclick="deleteStudent('${student.id}')">${t.btn_delete_student}</button>
+                </div>
+                
+                <div class="grid-form">
+                    <label>${t.lbl_full_name} 
+                        <input type="text" value="${escapeHTML(student.name || '')}" onchange="updateStudentField('${student.id}', 'name', this.value)">
+                    </label>
+                    <label>${t.lbl_student_number || 'Student Number:'} 
+                        <input type="text" value="${escapeHTML(student.studentNumber || '')}" onchange="updateStudentField('${student.id}', 'studentNumber', this.value)">
+                    </label>
+                    <label>${t.lbl_major || 'Major:'} 
+                        <input type="text" value="${escapeHTML(student.major || '')}" onchange="updateStudentField('${student.id}', 'major', this.value)">
+                    </label>
+                    <label>${t.lbl_cpr} 
+                        <input type="text" value="${escapeHTML(student.cpr)}" readonly>
+                    </label>
+                    <label>${t.lbl_gender} 
+                        <select onchange="updateStudentField('${student.id}', 'gender', this.value)">
+                            <option value="male" ${student.gender === 'male' ? 'selected' : ''}>${t.opt_male}</option>
+                            <option value="female" ${student.gender === 'female' ? 'selected' : ''}>${t.opt_female}</option>
+                        </select>
+                    </label>
+                    <label>${t.lbl_email} 
+                        <input type="email" value="${escapeHTML(student.email || '')}" onchange="updateStudentField('${student.id}', 'email', this.value)">
+                    </label>
+                </div>
+
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color, #e2e8f0);">
+
+                <div style="margin-bottom: 16px;">
+                    <h4 style="margin-bottom: 8px; color: var(--accent-slate-blue, #2b6cb0);">${t.lbl_cv_doc}</h4>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="cv-input-${student.id}" accept=".pdf,.doc,.docx" style="font-size: 0.85rem;">
+                        <button type="button" class="primary-btn" onclick="uploadStudentCV('${student.id}')" style="padding: 6px 12px; font-size: 0.85rem;">${t.btn_upload_cv}</button>
+                        <div style="margin-left: auto;">${cvDisplay}</div>
                     </div>
                 </div>
-            `;
-        });
-        messagesBox.scrollTop = messagesBox.scrollHeight;
+
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color, #e2e8f0);">
+
+                <div>
+                    <h4 style="margin-bottom: 8px; color: var(--accent-slate-blue, #2b6cb0);">${t.lbl_enrolled_courses}</h4>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <input type="text" id="course-input-${student.id}" placeholder="${t.ph_course}" style="flex: 1; padding: 8px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 6px; font-size: 0.85rem;">
+                        <button type="button" class="primary-btn" onclick="addCourseToStudent('${student.id}')" style="padding: 6px 14px; font-size: 0.85rem;">${t.btn_add_course}</button>
+                    </div>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        ${coursesHTML}
+                    </ul>
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
     });
+}
+
+async function updateStudentField(id, field, value) {
+    await db.collection('students').doc(id).update({ [field]: value });
+}
+
+async function deleteStudent(id) {
+    if (confirm("Delete this student entry?")) {
+        await db.collection('students').doc(id).delete();
+    }
+}
+
+// ==========================================
+// 6. COURSE MANAGEMENT
+// ==========================================
+async function addCourseToStudent(studentId) {
+    const inputEl = document.getElementById(`course-input-${studentId}`);
+    if (!inputEl) return;
+
+    const courseName = inputEl.value.trim();
+    if (!courseName) {
+        alert("Please enter a course name.");
+        return;
+    }
+
+    const now = new Date();
+    const formattedDateTime = now.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    }) + ", " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const newCourseObj = {
+        name: courseName,
+        addedAt: formattedDateTime
+    };
+
+    try {
+        const studentRef = db.collection('students').doc(studentId);
+        const docSnap = await studentRef.get();
+        if (!docSnap.exists) return;
+
+        const data = docSnap.data();
+        let currentCourses = Array.isArray(data.courses) ? data.courses : [];
+        currentCourses.push(newCourseObj);
+
+        await studentRef.update({ courses: currentCourses });
+        inputEl.value = "";
+    } catch (err) {
+        console.error("Error adding course:", err);
+        alert("Error adding course: " + err.message);
+    }
+}
+
+async function removeCourse(studentId, courseIndex) {
+    if (!confirm("Are you sure you want to delete this course?")) return;
+
+    try {
+        const studentRef = db.collection('students').doc(studentId);
+        const docSnap = await studentRef.get();
+
+        if (docSnap.exists) {
+            const data = docSnap.data();
+            let existingCourses = Array.isArray(data.courses) ? data.courses : [];
+            existingCourses.splice(courseIndex, 1);
+            await studentRef.update({ courses: existingCourses });
+        }
+    } catch (err) {
+        console.error("Error removing course:", err);
+        alert("Failed to delete course: " + err.message);
+    }
+}
+
+// ==========================================
+// 7. CV UPLOAD & DELETE
+// ==========================================
+async function uploadStudentCV(studentId) {
+    const fileInput = document.getElementById(`cv-input-${studentId}`);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a file first!");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > 700 * 1024) {
+        alert("File size is too large! Please select a file under 700KB.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+        try {
+            await db.collection('students').doc(studentId).update({
+                cvUrl: e.target.result,
+                cvName: file.name
+            });
+            alert("CV uploaded and saved successfully!");
+        } catch (err) {
+            console.error("Firestore CV update error:", err);
+            alert("Failed to save CV: " + err.message);
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+async function deleteStudentCV(studentId) {
+    if (!confirm("Are you sure you want to delete this CV?")) return;
+
+    try {
+        await db.collection('students').doc(studentId).update({
+            cvUrl: firebase.firestore.FieldValue.delete(),
+            cvName: firebase.firestore.FieldValue.delete()
+        });
+        alert("CV deleted successfully!");
+    } catch (err) {
+        console.error("Error deleting CV:", err);
+        alert("Failed to delete CV: " + err.message);
+    }
+}
+
+// ==========================================
+// 8. REAL-TIME GROUP CHAT & EMOJI PICKER
+// ==========================================
+function listenToGroupChat() {
+    db.collection('chat_messages')
+      .orderBy('timestamp', 'asc')
+      .limitToLast(50)
+      .onSnapshot((snapshot) => {
+          const box = document.getElementById('chat-messages');
+          if (!box) return;
+
+          box.innerHTML = "";
+
+          const currentUserId = currentUserData ? currentUserData.uid : null;
+          const currentName = currentUserData ? (currentUserData.displayName || currentUserData.email?.split('@')[0]) : null;
+
+          let unreadCount = 0;
+          const isChatHidden = document.getElementById('chat-window')?.classList.contains('hidden');
+
+          const savedLastRead = localStorage.getItem('lastReadChatTime');
+          const lastReadTime = savedLastRead ? new Date(savedLastRead) : pageLoadedAt;
+
+          snapshot.forEach(doc => {
+              const m = doc.data();
+              const div = document.createElement('div');
+              
+              const senderName = m.username || "Anonymous";
+              const textContent = m.message || "";
+              
+              const isMe = (m.uid && m.uid === currentUserId) || (senderName === currentName);
+
+              const msgDate = m.timestamp && typeof m.timestamp.toDate === 'function' 
+                  ? m.timestamp.toDate() 
+                  : new Date();
+
+              if (isChatHidden && !isMe && msgDate > lastReadTime) {
+                  unreadCount++;
+              }
+              
+              div.className = `chat-msg ${isMe ? 'my-msg' : 'other-msg'}`;
+              
+              let timeStr = "";
+              if (m.timestamp && typeof m.timestamp.toDate === 'function') {
+                  const now = new Date();
+                  const yesterday = new Date(now);
+                  yesterday.setDate(now.getDate() - 1);
+                  
+                  const isToday = msgDate.toDateString() === now.toDateString();
+                  const isYesterday = msgDate.toDateString() === yesterday.toDateString();
+                  
+                  const timeOnly = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                  if (isToday) {
+                      timeStr = timeOnly;
+                  } else if (isYesterday) {
+                      timeStr = `Yesterday ${timeOnly}`;
+                  } else {
+                      const dateOnly = msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                      timeStr = `${dateOnly}, ${timeOnly}`;
+                  }
+              } else {
+                  timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+
+              div.innerHTML = `
+                  <div class="msg-header">
+                      <strong class="msg-sender">${escapeHTML(senderName)}</strong>
+                      <span class="msg-time">${timeStr}</span>
+                  </div>
+                  <div class="msg-body">${escapeHTML(textContent)}</div>
+              `;
+              box.appendChild(div);
+          });
+
+          const badgeEl = document.getElementById('chat-unread-badge');
+          if (badgeEl) {
+              if (unreadCount > 0) {
+                  badgeEl.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                  badgeEl.classList.remove('hidden');
+              } else {
+                  badgeEl.classList.add('hidden');
+              }
+          }
+
+          box.scrollTop = box.scrollHeight;
+      }, (error) => {
+          console.error("Chat permission error:", error);
+      });
 }
 
 async function sendChatMessage() {
-    const input = document.getElementById("chat-input");
-    const msg = input.value.trim();
-    if (!msg || !currentUser) return;
+    const input = document.getElementById('chat-input');
+    if (!input) return;
 
-    await db.collection("chat_messages").add({
-        sender_uid: currentUser.uid,
-        sender_name: currentUser.displayName || "Employee",
-        message: msg,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    input.value = "";
-}
+    const message = input.value.trim();
+    if (!message) return;
 
-// 6. Excel Export & Account Modal
-function downloadAllStudentsData() {
-    fetch("api.php?action=get_students")
-        .then(res => res.json())
-        .then(res => {
-            if (res.status === "success") {
-                const worksheet = XLSX.utils.json_to_sheet(res.data);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-                XLSX.writeFile(workbook, "Student_Directory.xlsx");
-            }
+    const user = currentUserData || auth.currentUser;
+    if (!user) {
+        alert("Please sign in to send messages.");
+        return;
+    }
+
+    try {
+        const displayName = user.displayName 
+            || (user.email ? user.email.split('@')[0] : "User");
+
+        input.value = "";
+        document.getElementById('emoji-picker')?.classList.add('hidden');
+
+        await db.collection('chat_messages').add({
+            uid: user.uid,
+            username: displayName,
+            message: message,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+    } catch (err) {
+        console.error("Failed to send message:", err);
+        alert("Failed to send message: " + err.message);
+    }
 }
 
-function openAccountModal() {
-    if (!currentUser) return;
-    document.getElementById("modal-userid").innerText = currentUser.uid;
-    document.getElementById("modal-username").innerText = currentUser.displayName || "N/A";
-    document.getElementById("modal-email").innerText = currentUser.email;
-    document.getElementById("account-modal")?.classList.remove("hidden");
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker');
+    if (picker) {
+        picker.classList.toggle('hidden');
+    }
 }
 
-function closeAccountModal() {
-    document.getElementById("account-modal")?.classList.add("hidden");
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
 }
 
-// 7. i18n Language Toggle
-function toggleLanguage() {
-    currentLang = currentLang === "EN" ? "AR" : "EN";
-    document.documentElement.dir = currentLang === "AR" ? "rtl" : "ltr";
-    
-    document.querySelectorAll("[data-i18n]").forEach(el => {
-        const key = el.getAttribute("data-i18n");
-        if (i18n[currentLang][key]) el.innerText = i18n[currentLang][key];
-    });
+window.addEventListener('DOMContentLoaded', () => {
+    const emojiPicker = document.getElementById('emoji-picker');
+    const chatInput = document.getElementById('chat-input');
 
-    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-        const key = el.getAttribute("data-i18n-placeholder");
-        if (i18n[currentLang][key]) el.placeholder = i18n[currentLang][key];
-    });
+    if (emojiPicker && chatInput) {
+        emojiPicker.querySelectorAll('span').forEach(emoji => {
+            emoji.addEventListener('click', () => {
+                chatInput.value += emoji.innerText;
+                chatInput.focus();
+                emojiPicker.classList.add('hidden');
+            });
+        });
+    }
+});
+
+// ==========================================
+// 9. NAVIGATION, MODALS & LIVE CLOCK
+// ==========================================
+function showView(id) {
+    document.querySelectorAll('.card-view').forEach(v => v.classList.add('hidden'));
+    document.getElementById(id)?.classList.remove('hidden');
 }
 
-// Live Clock Footer Update
-setInterval(() => {
-    const footer = document.getElementById("live-footer-datetime");
-    if (footer) footer.innerText = new Date().toLocaleString();
-}, 1000);
+function openAccountModal() { document.getElementById('account-modal')?.classList.remove('hidden'); }
+function closeAccountModal() { document.getElementById('account-modal')?.classList.add('hidden'); }
+
+function toggleChatWindow() { 
+    const chatWin = document.getElementById('chat-window');
+    if (!chatWin) return;
+
+    chatWin.classList.toggle('hidden');
+
+    if (!chatWin.classList.contains('hidden')) {
+        localStorage.setItem('lastReadChatTime', new Date().toISOString());
+
+        const badgeEl = document.getElementById('chat-unread-badge');
+        if (badgeEl) {
+            badgeEl.innerText = '0';
+            badgeEl.classList.add('hidden');
+        }
+    }
+}
+
+function runLiveFooterClock() {
+    const el = document.getElementById('live-footer-datetime');
+    if (el) {
+        setInterval(() => {
+            const now = new Date();
+            el.innerText = now.toLocaleDateString(currentLang === 'ar' ? 'ar-BH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + " | " + now.toLocaleTimeString();
+        }, 1000);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    runLiveFooterClock();
+    applyLanguageTranslations();
+});
