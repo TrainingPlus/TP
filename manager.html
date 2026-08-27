@@ -1,122 +1,131 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Portal</title>
+    <title>Manager Control Center - Training Plus Institute</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <nav class="top-nav">
+<body class="dashboard-body">
+    <script>
+        const role = localStorage.getItem('current_user_role');
+        const session = localStorage.getItem('active_manager_session');
+        if (role !== 'manager' || !session) {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+    <header class="app-header manager-header">
         <div class="nav-left">
-            <span style="font-weight:700;">Manager Control Panel</span>
-            <div class="search-container">
-                <input type="text" placeholder="Search employees/courses...">
-            </div>
+            <h2>Manager Portal</h2>
         </div>
-        <div class="nav-controls">
-            <button class="nav-btn" onclick="toggleLanguage()">EN / AR</button>
-            <div id="user-avatar-badge" class="avatar-icon">M</div>
-            <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+        <div class="nav-right">
+            <span class="user-badge" id="mgr-display-name">Manager</span>
+            <button class="nav-btn logout-btn" onclick="logoutManager()">Logout</button>
         </div>
-    </nav>
+    </header>
 
-    <div class="card-view">
-        <div class="tab-header">
-            <button class="tab-btn active" onclick="switchTab('tab-approvals')">Pending Sign-Ins</button>
-            <button class="tab-btn" onclick="switchTab('tab-staff')">Manage Employees</button>
-            <button class="tab-btn" onclick="switchTab('tab-courses')">Manage Courses</button>
-            <button class="tab-btn" onclick="switchTab('tab-settings')">Account Settings</button>
-        </div>
+    <main class="main-content">
+        <div class="card-view">
+            <h3>System Credentials Management</h3>
+            <p style="color: #718096; margin-bottom: 20px;">Update access passcodes for Operator and Manager portal roles.</p>
 
-        <!-- Approvals Tab -->
-        <div id="tab-approvals" class="tab-content">
-            <h3>Pending Employee Sign-Ins</h3>
-            <div class="student-list" style="margin-top: 16px;">
-                <div class="student-item">
-                    <div class="student-header">
-                        <span>Sara Ahmed (sara@company.com)</span>
-                        <div class="button-group">
-                            <button class="primary-btn" onclick="acceptEmployee(this)">Accept</button>
-                            <button class="secondary-btn" onclick="this.parentElement.parentElement.parentElement.remove()">Reject</button>
-                        </div>
+            <form id="credentials-form" onsubmit="updateCredentials(event)">
+                <div class="form-section">
+                    <h4>Operator Access Credentials</h4>
+                    <div class="grid-form">
+                        <label>Operator Username
+                            <input type="text" id="cfg-op-user" required>
+                        </label>
+                        <label>Operator Passcode
+                            <input type="password" id="cfg-op-pass" required>
+                        </label>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Staff Tab with Inspection Request -->
-        <div id="tab-staff" class="tab-content hidden">
-            <h3>Employee Directory (Inspect Work)</h3>
-            <div class="student-list" style="margin-top: 16px;">
-                <div class="student-item">
-                    <div class="student-header" onclick="requestInspect('Sara Ahmed')">
-                        <span>Sara Ahmed - Developer</span>
-                        <button class="secondary-btn">Request Access to View Page</button>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+                <div class="form-section">
+                    <h4>Manager Access Credentials</h4>
+                    <div class="grid-form">
+                        <label>Manager Username
+                            <input type="text" id="cfg-mgr-user" required>
+                        </label>
+                        <label>Manager Master Password
+                            <input type="password" id="cfg-mgr-pass" required>
+                        </label>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Courses Tab -->
-        <div id="tab-courses" class="tab-content hidden">
-            <form class="standard-form" onsubmit="addCourse(event)">
-                <label>Add New Course
-                    <input type="text" id="course-name" placeholder="Course Name" required>
-                </label>
-                <button type="submit" class="primary-btn">Add & Notify Employees</button>
-            </form>
-            <ul id="course-list" style="margin-top:16px; padding-left: 20px;">
-                <li>Web Engineering <button class="secondary-btn" style="color:red;" onclick="this.parentElement.remove()">Delete</button></li>
-            </ul>
-        </div>
-
-        <!-- Settings Tab -->
-        <div id="tab-settings" class="tab-content hidden">
-            <form class="standard-form" onsubmit="updateProfile(event)">
-                <label>Manager Username
-                    <input type="text" id="mgr-username" value="ManagerAdmin">
-                </label>
-                <label>Change Password
-                    <input type="password" id="mgr-password" placeholder="New Password">
-                </label>
-                <button type="submit" class="primary-btn">Update Credentials</button>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="primary-btn manager-btn">Save System Credentials</button>
+                </div>
             </form>
         </div>
-    </div>
+    </main>
 
-    <div class="bottom-footer">© 2026 Management System Portal.</div>
+    <!-- Firebase SDK Compat libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script src="script.js"></script>
     <script>
-        checkAccess('manager');
+        const name = localStorage.getItem('current_user_name');
+        if (name) document.getElementById('mgr-display-name').textContent = name;
 
-        function acceptEmployee(btn) {
-            btn.innerText = "Accepted";
-            btn.disabled = true;
-            sendEmailNotification("Employee", "Your sign-in request was accepted by the Manager.");
+        function logoutManager() {
+            localStorage.removeItem('active_manager_session');
+            localStorage.removeItem('current_user_role');
+            localStorage.removeItem('current_user_name');
+            window.location.href = 'index.html';
         }
 
-        function requestInspect(username) {
-            sendEmailNotification(username, "The Manager wants to see your page.");
-            alert(`Email sent to ${username} asking for permission to view their page.`);
+        async function loadCredentials() {
+            try {
+                const opSnap = await db.collection('system_credentials').doc('operator').get();
+                if (opSnap.exists) {
+                    const data = opSnap.data();
+                    document.getElementById('cfg-op-user').value = data.username || '';
+                    document.getElementById('cfg-op-pass').value = data.password || '';
+                } else {
+                    document.getElementById('cfg-op-user').value = 'operator';
+                    document.getElementById('cfg-op-pass').value = 'op1234';
+                }
+
+                const mgrSnap = await db.collection('system_credentials').doc('manager').get();
+                if (mgrSnap.exists) {
+                    const data = mgrSnap.data();
+                    document.getElementById('cfg-mgr-user').value = data.username || '';
+                    document.getElementById('cfg-mgr-pass').value = data.password || '';
+                } else {
+                    document.getElementById('cfg-mgr-user').value = 'admin';
+                    document.getElementById('cfg-mgr-pass').value = 'admin1234';
+                }
+            } catch (err) {
+                console.error("Error loading credentials:", err);
+            }
         }
 
-        function addCourse(e) {
+        async function updateCredentials(e) {
             e.preventDefault();
-            const name = document.getElementById('course-name').value;
-            const li = document.createElement('li');
-            li.innerHTML = `${name} <button class="secondary-btn" style="color:red;" onclick="this.parentElement.remove()">Delete</button>`;
-            document.getElementById('course-list').appendChild(li);
-            document.getElementById('course-name').value = '';
+            const opUser = document.getElementById('cfg-op-user').value.trim();
+            const opPass = document.getElementById('cfg-op-pass').value.trim();
+            const mgrUser = document.getElementById('cfg-mgr-user').value.trim();
+            const mgrPass = document.getElementById('cfg-mgr-pass').value.trim();
 
-            sendEmailNotification("All Employees", `New course open: ${name}`);
+            try {
+                await db.collection('system_credentials').doc('operator').set({ username: opUser, password: opPass });
+                await db.collection('system_credentials').doc('manager').set({ username: mgrUser, password: mgrPass });
+                alert("System credentials updated successfully!");
+            } catch (err) {
+                alert("Failed to update credentials: " + err.message);
+            }
         }
 
-        function updateProfile(e) {
-            e.preventDefault();
-            alert("Profile updated successfully!");
-        }
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCredentials();
+        });
     </script>
 </body>
 </html>
