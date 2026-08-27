@@ -1,66 +1,109 @@
 <?php
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 require_once 'config.php';
 
-$action = $_GET['action'] ?? '';
-$input = json_decode(file_get_contents('php://input'), true);
+$method = $_SERVER['REQUEST_METHOD'];
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
 switch ($action) {
-    
-    // Check or create user profile after Google Login
-    case 'sync_user':
-        $uid = $input['uid'] ?? '';
-        $email = $input['email'] ?? '';
-        $displayName = $input['displayName'] ?? 'User';
-
-        if (empty($uid) || empty($email)) {
-            echo json_encode(["status" => "error", "message" => "Missing user parameters"]);
-            exit();
-        }
-
-        $stmt = $conn->prepare("SELECT * FROM users WHERE uid = :uid");
-        $stmt->execute(['uid' => $uid]);
-        $user = $stmt->fetch();
-
-        if (!$user) {
-            $stmt = $conn->prepare("INSERT INTO users (uid, email, display_name, role) VALUES (:uid, :email, :displayName, 'employee')");
-            $stmt->execute(['uid' => $uid, 'email' => $email, 'displayName' => $displayName]);
-            $role = 'employee';
-        } else {
-            $role = $user['role'];
-        }
-
-        echo json_encode(["status" => "success", "role" => $role]);
-        break;
-
-    // Register Student CPR
-    case 'add_cpr':
-        $cpr = $input['cpr'] ?? '';
-        $uid = $input['uid'] ?? '';
-
-        if (!preg_match('/^\d{9}$/', $cpr)) {
-            echo json_encode(["status" => "error", "message" => "CPR must be exactly 9 digits."]);
-            exit();
-        }
-
-        try {
-            $stmt = $conn->prepare("INSERT INTO students (cpr, created_by_uid) VALUES (:cpr, :uid)");
-            $stmt->execute(['cpr' => $cpr, 'uid' => $uid]);
-            echo json_encode(["status" => "success"]);
-        } catch (PDOException $e) {
-            echo json_encode(["status" => "error", "message" => "CPR already registered or database error."]);
-        }
-        break;
-
-    // Fetch All Students
     case 'get_students':
-        $stmt = $conn->prepare("SELECT id, cpr, full_name, created_at FROM students ORDER BY created_at DESC");
-        $stmt->execute();
+        handleGetStudents($pdo);
+        break;
+    case 'add_student':
+        handleAddStudent($pdo);
+        break;
+    case 'update_student':
+        handleUpdateStudent($pdo);
+        break;
+    case 'delete_student':
+        handleDeleteStudent($pdo);
+        break;
+    default:
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Invalid API Action."]);
+        break;
+}
+
+function handleGetStudents($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT * FROM students ORDER BY created_at DESC");
         $students = $stmt->fetchAll();
         echo json_encode(["status" => "success", "data" => $students]);
-        break;
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
 
-    default:
-        echo json_encode(["status" => "error", "message" => "Invalid endpoint"]);
-        break;
+function handleAddStudent($pdo) {
+    $data = json_decode(file_get_contents("php://input"), true);
+    if (!isset($data['cpr']) || empty(trim($data['cpr']))) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "CPR is required."]);
+        return;
+    }
+
+    $cpr = trim($data['cpr']);
+    $name = isset($data['name']) ? trim($data['name']) : '';
+    $email = isset($data['email']) ? trim($data['email']) : '';
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO students (cpr, name, email) VALUES (:cpr, :name, :email)");
+        $stmt->execute([':cpr' => $cpr, ':name' => $name, ':email' => $email]);
+        echo json_encode(["status" => "success", "message" => "Student added successfully."]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+function handleUpdateStudent($pdo) {
+    $data = json_decode(file_get_contents("php://input"), true);
+    if (!isset($data['id'])) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Student ID is required."]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE students SET name = :name, email = :email, major = :major WHERE id = :id");
+        $stmt->execute([
+            ':name' => $data['name'],
+            ':email' => $data['email'],
+            ':major' => $data['major'],
+            ':id' => $data['id']
+        ]);
+        echo json_encode(["status" => "success", "message" => "Student updated."]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+function handleDeleteStudent($pdo) {
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "message" => "Missing Student ID."]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM students WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        echo json_encode(["status" => "success", "message" => "Student deleted."]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
 }
 ?>
