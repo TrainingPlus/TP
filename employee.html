@@ -3,123 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Plus Institute - Employee Portal</title>
+    <title>Employee Portal - Training Plus Institute</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-
     <!-- SheetJS for Excel Exports -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body>
-    <header class="top-nav">
+<body class="dashboard-body">
+    <script>
+        // Session Check
+        const role = localStorage.getItem('current_user_role');
+        if (role !== 'employee') {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+    <!-- HEADER / NAVIGATION BAR -->
+    <header class="app-header">
         <div class="nav-left">
-            <div class="search-container hidden" id="search-box">
+            <button class="nav-btn lang-btn" onclick="toggleLanguage()">🌐 English / العربية</button>
+            <div id="search-box" class="search-box">
                 <input type="text" id="search-input" data-i18n-placeholder="search_placeholder" placeholder="Search by name or CPR..." oninput="handleSearch()">
             </div>
+            <button id="download-all-btn" class="nav-btn download-btn" data-i18n="download_all" onclick="downloadAllStudentsData()">Download All (Excel)</button>
         </div>
-        <div class="nav-controls">
-            <!-- Language Toggle Button -->
-            <button id="lang-toggle-btn" class="nav-btn" onclick="toggleLanguage()">AR / EN</button>
-            <button id="download-all-btn" class="nav-btn hidden" data-i18n="download_all" onclick="downloadAllStudentsData()">Download All (Excel)</button>
-            <button id="account-btn" class="nav-btn hidden" data-i18n="account" onclick="openAccountModal()">Account</button>
-            <button id="logout-btn" class="nav-btn logout-btn hidden" data-i18n="logout" onclick="logoutUser()">Logout</button>
+        <div class="nav-right">
+            <span class="user-badge" id="employee-display-name">Employee</span>
+            <button id="account-btn" class="nav-btn account-btn" data-i18n="account" onclick="openAccountModal()">Account</button>
+            <button id="logout-btn" class="nav-btn logout-btn" data-i18n="logout" onclick="logoutUser()">Logout</button>
         </div>
     </header>
 
-    <main>
-        <!-- Google-Only Auth View -->
-        <section id="view-auth" class="card-view" style="max-width: 400px; margin: 80px auto; text-align: center; padding: 40px 28px; background: var(--bg-card, #ffffff); border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);">
-            <div style="margin-bottom: 24px;">
-                <h2 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 8px; font-size: 1.6rem; font-weight: 700;" data-i18n="welcome_title">Welcome Back</h2>
-                <p style="color: var(--text-muted, #718096); font-size: 0.92rem; line-height: 1.4;" data-i18n="welcome_subtitle">Sign in with your institutional Google account to access the Directory</p>
-            </div>
+    <main class="main-content">
+        <!-- VIEW 1: AUTHENTICATION FALLBACK -->
+        <div id="view-auth" class="card-view">
+            <h2 data-i18n="welcome_title">Welcome</h2>
+            <p data-i18n="welcome_subtitle">Sign in to access the Training Plus Student Directory</p>
+            <button class="primary-btn google-btn" data-i18n="btn_google" onclick="signInWithGoogle()">Sign in with Google</button>
+        </div>
 
-            <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
-                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 18px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; color: #1e293b; font-weight: 600; font-size: 0.98rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
-                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#94a3b8';" 
-                onmouseout="this.style.background='#ffffff'; this.style.borderColor='#cbd5e1';"
-            >
-                <svg width="22" height="22" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span data-i18n="btn_google">Sign in with Google</span>
-            </button>
-        </section>
-
-        <!-- Home / Directory View -->
-        <section id="view-home" class="card-view hidden">
-            <div class="dashboard-header">
+        <!-- VIEW 2: HOME / STUDENT DIRECTORY -->
+        <div id="view-home" class="card-view hidden">
+            <div class="directory-header">
                 <h2 data-i18n="student_directory">Student Directory</h2>
-                <button class="primary-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR</button>
+                <button class="primary-btn add-cpr-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR</button>
             </div>
             <div id="student-container" class="student-list"></div>
-        </section>
+        </div>
 
-        <!-- CPR Entry View -->
-        <section id="view-add-cpr" class="card-view hidden">
+        <!-- VIEW 3: ADD NEW CPR -->
+        <div id="view-add-cpr" class="card-view hidden">
             <h2 data-i18n="register_cpr">Register New CPR</h2>
-            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
-            <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
-                <label>
-                    <span data-i18n="cpr_label">CPR Number (9 Digits):</span>
-                    <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456" pattern="\d{9}">
-                </label>
-                <div class="button-group">
-                    <button type="submit" class="primary-btn" id="add-student-btn" data-i18n="btn_submit">Submit Record</button>
-                    <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
-                </div>
-            </form>
-        </section>
-
-        <!-- CPR Success View -->
-        <section id="view-cpr-success" class="card-view hidden">
-            <div class="success-box">
-                <div class="check-icon">✓</div>
-                <h2 data-i18n="cpr_success_title">CPR Added Successfully!</h2>
-                <p class="subtitle" data-i18n="cpr_success_subtitle">Would you like to add another student CPR record?</p>
-                <div class="button-group center-btn">
-                    <button type="button" class="primary-btn" data-i18n="btn_add_another" onclick="resetAndAddAnotherCPR()">+ Add Another CPR</button>
-                    <button type="button" class="secondary-btn" data-i18n="btn_go_directory" onclick="showView('view-home')">Go to Directory</button>
-                </div>
+            <p data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label data-i18n="cpr_label">CPR Number (9 Digits):</label>
+                <input type="text" id="cpr-input" maxlength="9" placeholder="e.g. 010203040">
             </div>
-        </section>
+
+            <div class="button-group" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="primary-btn" data-i18n="btn_submit" onclick="addStudentCPR()">Submit Record</button>
+                <button class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
+            </div>
+        </div>
+
+        <!-- VIEW 4: CPR SUCCESS SCREEN -->
+        <div id="view-cpr-success" class="card-view hidden" style="text-align: center;">
+            <div style="font-size: 3rem; color: #48bb78; margin-bottom: 10px;">✓</div>
+            <h2 data-i18n="cpr_success_title">CPR Added Successfully!</h2>
+            <p data-i18n="cpr_success_subtitle">Would you like to add another student CPR record?</p>
+
+            <div class="button-group" style="margin-top: 25px; display: flex; justify-content: center; gap: 15px;">
+                <button class="primary-btn" data-i18n="btn_add_another" onclick="resetAndAddAnotherCPR()">+ Add Another CPR</button>
+                <button class="secondary-btn" data-i18n="btn_go_directory" onclick="showView('view-home')">Go to Directory</button>
+            </div>
+        </div>
     </main>
 
-    <!-- Account Details Modal -->
-    <div id="account-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
-            <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
-            <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
-            <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
-            <p style="margin-bottom: 16px;"><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
+    <!-- ACCOUNT MODAL -->
+    <div id="account-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 data-i18n="modal_account_title">User Account</h3>
+            <div class="account-info">
+                <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">-</span></p>
+                <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">-</span></p>
+                <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">-</span></p>
+            </div>
+            <button class="primary-btn" onclick="closeAccountModal()" style="margin-top: 20px; width: 100%;">Close</button>
         </div>
     </div>
 
-    <!-- Group Chat Floating Widget -->
-    <div id="chat-widget">
-        <button class="chat-fab" onclick="toggleChatWindow()">
-            💬
-            <span id="chat-unread-badge" class="hidden">0</span>
-        </button>
-    
-        <div id="chat-window" class="chat-box hidden">
-            <div class="chat-header">
-                <span data-i18n="chat_header">Team Group Chat</span>
-                <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
-            </div>
-            
-            <div id="chat-messages" class="chat-messages"></div>
+    <!-- FLOATING GROUP CHAT TOGGLE BUTTON -->
+    <button class="chat-toggle-btn" onclick="toggleChatWindow()">
+        💬 Chat
+        <span id="chat-unread-badge" class="chat-badge hidden">0</span>
+    </button>
 
-            <!-- Emoji Picker Popup Container -->
+    <!-- FLOATING GROUP CHAT WINDOW -->
+    <div id="chat-window" class="chat-window hidden">
+        <div class="chat-header">
+            <span data-i18n="chat_header">Team Group Chat</span>
+            <button class="chat-close-btn" onclick="toggleChatWindow()">✕</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-area">
+            <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
+            <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <button class="primary-btn send-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
+        </div>
+        <!-- Emoji Picker Popup Container -->
             <div id="emoji-picker" class="emoji-picker-container hidden">
                 <span onclick="insertEmoji('😀')">😀</span>
                 <span onclick="insertEmoji('😂')">😂</span>
@@ -137,20 +128,23 @@
                 <span onclick="insertEmoji('💯')">💯</span>
                 <span onclick="insertEmoji('🚀')">🚀</span>
             </div>
-
-            <!-- Chat Input Row -->
-            <div class="chat-input-row">
-                <button type="button" class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
-                <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-                <button type="button" class="primary-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
-            </div>
-        </div>
     </div>
-    
-    <footer class="bottom-footer">
-        <p id="live-footer-datetime">Loading date & time...</p>
+
+    <footer class="app-footer">
+        <span id="live-footer-datetime"></span>
     </footer>
 
+    <!-- Firebase SDK Compat libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <script src="script.js"></script>
+    <script>
+        const uName = localStorage.getItem('current_user_name');
+        if (uName) {
+            document.getElementById('employee-display-name').textContent = uName;
+        }
+    </script>
 </body>
 </html>
