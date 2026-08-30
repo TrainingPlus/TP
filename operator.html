@@ -26,7 +26,7 @@
     <main class="container">
         <section class="portal-section">
             <h2>Assigned Courses & Classes</h2>
-            <p class="subtitle">View manager-created courses, add classes, and manage student Tamkeen status.</p>
+            <p class="subtitle">View manager-created courses, add/edit/delete classes, and manage student Tamkeen status.</p>
             
             <div id="courses-list-container" class="courses-container">
                 <p class="loading-text">Loading courses from manager...</p>
@@ -36,6 +36,17 @@
 
     <script src="script.js"></script>
     <script>
+        // Helper function to escape HTML to prevent XSS
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Restrict page access strictly to the Operator
         auth.onAuthStateChanged((user) => {
             if (user) {
@@ -104,6 +115,37 @@
             }
         }
 
+        // Edit Class Name
+        async function editClassName(courseId, classId, currentName) {
+            const newName = prompt("Edit Class Name:", currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId).update({
+                        className: newName.trim()
+                    });
+                alert("Class updated successfully!");
+            } catch (error) {
+                console.error("Error updating class:", error);
+                alert("Failed to update class: " + error.message);
+            }
+        }
+
+        // Delete Class
+        async function deleteClass(courseId, classId, className) {
+            if (!confirm(`Are you sure you want to delete class "${className}" and all its records?`)) return;
+
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId).delete();
+                alert("Class deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting class:", error);
+                alert("Failed to delete class: " + error.message);
+            }
+        }
+
         // Load Classes and Student Tables for a Course
         function loadClassesForCourse(courseId) {
             db.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
@@ -122,8 +164,12 @@
                     const classBox = document.createElement("div");
                     classBox.className = "class-box";
                     classBox.innerHTML = `
-                        <div class="class-title-row">
-                            <h4>Class: ${escapeHTML(classData.className)}</h4>
+                        <div class="class-title-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <h4 style="margin: 0;">Class: ${escapeHTML(classData.className)}</h4>
+                                <button class="btn-sm btn-edit" onclick="editClassName('${courseId}', '${classId}', '${escapeHTML(classData.className)}')">✏️ Edit</button>
+                                <button class="btn-sm btn-delete" onclick="deleteClass('${courseId}', '${classId}', '${escapeHTML(classData.className)}')">🗑️ Delete</button>
+                            </div>
                             <button class="btn-secondary" onclick="addStudentToClass('${courseId}', '${classId}')">+ Add Student</button>
                         </div>
                         <div class="table-responsive">
@@ -133,10 +179,11 @@
                                         <th>Student Name</th>
                                         <th>Student CPR</th>
                                         <th>Tamkeen Status</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="students-tbody-${courseId}-${classId}">
-                                    <tr><td colspan="3" class="loading-text">Loading students...</td></tr>
+                                    <tr><td colspan="4" class="loading-text">Loading students...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -174,7 +221,40 @@
             }
         }
 
-        // Load Students and render the Tamkeen Status dropdown
+        // Edit Student Name
+        async function editStudentName(courseId, classId, studentId, currentName) {
+            const newName = prompt("Edit Student Name:", currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId)
+                    .collection("students").doc(studentId).update({
+                        studentName: newName.trim()
+                    });
+                alert("Student updated successfully!");
+            } catch (error) {
+                console.error("Error updating student:", error);
+                alert("Failed to update student: " + error.message);
+            }
+        }
+
+        // Delete Student
+        async function deleteStudent(courseId, classId, studentId, studentName) {
+            if (!confirm(`Are you sure you want to delete student "${studentName}"?`)) return;
+
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId)
+                    .collection("students").doc(studentId).delete();
+                alert("Student deleted successfully!");
+            } catch (error) {
+                console.error("Error deleting student:", error);
+                alert("Failed to delete student: " + error.message);
+            }
+        }
+
+        // Load Students and render the Tamkeen Status dropdown with Actions
         function loadStudentsForClass(courseId, classId) {
             db.collection("courses").doc(courseId)
                 .collection("classes").doc(classId)
@@ -183,7 +263,7 @@
                     tbody.innerHTML = "";
 
                     if (snapshot.empty) {
-                        tbody.innerHTML = `<tr><td colspan="3" class="no-data">No students registered in this class.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="4" class="no-data">No students registered in this class.</td></tr>`;
                         return;
                     }
 
@@ -203,6 +283,10 @@
                                     <option value="Under Process" ${currentStatus === 'Under Process' ? 'selected' : ''}>Under Process</option>
                                     <option value="Withdrawn" ${currentStatus === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
                                 </select>
+                            </td>
+                            <td>
+                                <button class="btn-sm btn-edit" onclick="editStudentName('${courseId}', '${classId}', '${studentId}', '${escapeHTML(student.studentName)}')">✏️ Edit</button>
+                                <button class="btn-sm btn-delete" onclick="deleteStudent('${courseId}', '${classId}', '${studentId}', '${escapeHTML(student.studentName)}')">🗑️ Delete</button>
                             </td>
                         `;
                         tbody.appendChild(row);
