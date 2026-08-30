@@ -19,7 +19,7 @@ const db = firebase.firestore();
 
 // Designated single-account email addresses
 const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";   // Replace with actual Manager email
-const ALLOWED_OPERATOR_EMAIL = "operator@gmail.com"; // Replace with actual Operator email
+const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com"; // Replace with actual Operator email
 
 let currentUserData = null;
 let currentRole = null;
