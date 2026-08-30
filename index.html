@@ -3,207 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Authentication - Training Plus Institute</title>
+    <title>Training Plus Institute</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <!-- SheetJS for Excel Exports -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body class="role-auth-page">
-    <div class="auth-card">
-        <div class="logo-container">
-            <h1 class="brand-title">Training Plus Institute</h1>
-            <p class="brand-subtitle">System Portal Access</p>
-        </div>
-
-        <div id="alert-box" class="alert-message hidden"></div>
-
-        <div class="role-selector">
-            <button type="button" class="role-tab active" onclick="selectRole('employee')">Employee Login</button>
-            <button type="button" class="role-tab" onclick="selectRole('operator')">Operator Login</button>
-            <button type="button" class="role-tab" onclick="selectRole('manager')">Manager Login</button>
-        </div>
-
-        <!-- EMPLOYEE LOGIN PANEL -->
-        <div id="panel-employee" class="login-panel">
-            <div class="panel-info">
-                <h3>Employee Portal Access</h3>
-                <p>Sign in using your assigned Google Workspace or Employee email account.</p>
+<body>
+    <header class="top-nav">
+        <div class="nav-left">
+            <div class="search-container hidden" id="search-box">
+                <input type="text" id="search-input" data-i18n-placeholder="search_placeholder" placeholder="Search by name or CPR..." oninput="handleSearch()">
             </div>
-            <button class="google-auth-btn" onclick="loginEmployeeGoogle()">
+        </div>
+        <div class="nav-controls">
+            <!-- Language Toggle Button -->
+            <button id="lang-toggle-btn" class="nav-btn" onclick="toggleLanguage()">AR / EN</button>
+            <button id="download-all-btn" class="nav-btn hidden" data-i18n="download_all" onclick="downloadAllStudentsData()">Download All (Excel)</button>
+            <button id="account-btn" class="nav-btn hidden" data-i18n="account" onclick="openAccountModal()">Account</button>
+            <button id="logout-btn" class="nav-btn logout-btn hidden" data-i18n="logout" onclick="logoutUser()">Logout</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Auth View -->
+        <section id="view-auth" class="card-view" style="max-width: 420px; margin: 60px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <h2 style="color: #2b6cb0; margin-bottom: 8px;" data-i18n="welcome_title">Welcome</h2>
+            <p style="color: #718096; margin-bottom: 20px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Select your role and sign in to access the system</p>
+
+            <!-- Role Selector Tabs -->
+            <div class="role-selector" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                <button type="button" id="role-operator-btn" class="role-tab active" onclick="setLoginRole('operator')" 
+                    style="flex: 1; padding: 10px; border: none; background: #2b6cb0; color: white; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Operator Sign In
+                </button>
+                <button type="button" id="role-manager-btn" class="role-tab" onclick="setLoginRole('manager')" 
+                    style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Manager Sign In
+                </button>
+            </div>
+
+            <input type="hidden" id="selected-role" value="operator">
+
+            <!-- Single Active Session Info Notice -->
+            <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 10px; margin-bottom: 20px; text-align: left; border-radius: 4px;">
+                <p style="margin: 0; color: #2b6cb0; font-size: 0.8rem; font-weight: 500;">
+                    ℹ️ <strong>Single User Access:</strong> Only one user can be signed in at a time. Signing in will disconnect any active session.
+                </p>
+            </div>
+
+            <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
+                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;"
+                onmouseover="this.style.background='#f8fafc'" 
+                onmouseout="this.style.background='#ffffff'"
+            >
                 <svg width="20" height="20" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                 </svg>
-                Continue with Google
+                <span id="google-btn-text" data-i18n="btn_google">Sign in as Operator</span>
             </button>
-        </div>
+        </section>
 
-        <!-- OPERATOR LOGIN PANEL -->
-        <div id="panel-operator" class="login-panel hidden">
-            <form id="form-operator" onsubmit="loginOperator(event)">
-                <div class="form-group">
-                    <label for="op-username">Operator Username</label>
-                    <input type="text" id="op-username" placeholder="Enter username" required autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label for="op-password">Passcode</label>
-                    <input type="password" id="op-password" placeholder="Enter passcode" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="submit-btn">Login as Operator</button>
-            </form>
-        </div>
+        <!-- Home / Directory View -->
+        <section id="view-home" class="card-view hidden">
+            <div class="dashboard-header">
+                <h2 data-i18n="student_directory">Student Directory</h2>
+                <button class="primary-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR</button>
+            </div>
+            <div id="student-container" class="student-list"></div>
+        </section>
 
-        <!-- MANAGER LOGIN PANEL -->
-        <div id="panel-manager" class="login-panel hidden">
-            <form id="form-manager" onsubmit="loginManager(event)">
-                <div class="form-group">
-                    <label for="mgr-username">Manager Username</label>
-                    <input type="text" id="mgr-username" placeholder="Enter manager ID" required autocomplete="username">
+        <!-- CPR Entry View -->
+        <section id="view-add-cpr" class="card-view hidden">
+            <h2 data-i18n="register_cpr">Register New CPR</h2>
+            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
+            <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
+                <label>
+                    <span data-i18n="cpr_label">CPR Number (9 Digits):</span>
+                    <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456">
+                </label>
+                <div class="button-group">
+                    <button type="submit" class="primary-btn" id="add-student-btn" data-i18n="btn_submit">Submit Record</button>
+                    <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
                 </div>
-                <div class="form-group">
-                    <label for="mgr-password">Master Password</label>
-                    <input type="password" id="mgr-password" placeholder="Enter password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="submit-btn manager-btn">Login as Manager</button>
             </form>
+        </section>
+
+        <!-- CPR Success View -->
+        <section id="view-cpr-success" class="card-view hidden">
+            <div class="success-box">
+                <div class="check-icon">✓</div>
+                <h2 data-i18n="cpr_success_title">CPR Added Successfully!</h2>
+                <p class="subtitle" data-i18n="cpr_success_subtitle">Would you like to add another student CPR record?</p>
+                <div class="button-group center-btn">
+                    <button type="button" class="primary-btn" data-i18n="btn_add_another" onclick="resetAndAddAnotherCPR()">+ Add Another CPR</button>
+                    <button type="button" class="secondary-btn" data-i18n="btn_go_directory" onclick="showView('view-home')">Go to Directory</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Account Details Modal -->
+    <div id="account-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
+            <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
+            <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
+            <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
+            <p><strong data-i18n="lbl_role">Role:</strong> <span id="modal-role">--</span></p>
+            <p style="margin-bottom: 16px;"><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
         </div>
     </div>
 
-    <!-- Firebase SDK Compat libraries -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Group Chat Floating Widget -->
+    <div id="chat-widget">
+        <button class="chat-fab" onclick="toggleChatWindow()">
+            💬
+            <span id="chat-unread-badge" class="hidden">0</span>
+        </button>
+        
+        <div id="chat-window" class="chat-box hidden">
+            <div class="chat-header">
+                <span data-i18n="chat_header">Team Group Chat</span>
+                <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <!-- Emoji Picker Popup Container -->
+            <div id="emoji-picker" class="emoji-picker-container hidden">
+                <span>😀</span><span>😂</span><span>😍</span><span>👍</span><span>❤️</span>
+                <span>🔥</span><span>🎉</span><span>👏</span><span>🙏</span><span>✨</span>
+                <span>😊</span><span>😎</span><span>🙌</span><span>💯</span><span>🚀</span>
+            </div>
+
+            <!-- Chat Input Row -->
+            <div class="chat-input-row">
+                <button type="button" class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
+                <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button type="button" class="primary-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bottom-footer">
+        <p id="live-footer-datetime">Loading date & time...</p>
+    </footer>
 
     <script src="script.js"></script>
-    <script>
-        let currentSelectedRole = 'employee';
-
-        function selectRole(role) {
-            currentSelectedRole = role;
-            document.querySelectorAll('.role-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.login-panel').forEach(panel => panel.classList.add('hidden'));
-
-            if (role === 'employee') {
-                document.querySelectorAll('.role-tab')[0].classList.add('active');
-                document.getElementById('panel-employee').classList.remove('hidden');
-            } else if (role === 'operator') {
-                document.querySelectorAll('.role-tab')[1].classList.add('active');
-                document.getElementById('panel-operator').classList.remove('hidden');
-            } else if (role === 'manager') {
-                document.querySelectorAll('.role-tab')[2].classList.add('active');
-                document.getElementById('panel-manager').classList.remove('hidden');
-            }
-            hideAlert();
-        }
-
-        function showAlert(msg) {
-            const alertBox = document.getElementById('alert-box');
-            alertBox.textContent = msg;
-            alertBox.classList.remove('hidden');
-        }
-
-        function hideAlert() {
-            const alertBox = document.getElementById('alert-box');
-            alertBox.textContent = '';
-            alertBox.classList.add('hidden');
-        }
-
-        async function loginEmployeeGoogle() {
-            hideAlert();
-            try {
-                await signInWithGoogleEmployee();
-            } catch (err) {
-                showAlert("Google Sign-In Error: " + err.message);
-            }
-        }
-
-        async function loginOperator(e) {
-            e.preventDefault();
-            hideAlert();
-            const user = document.getElementById('op-username').value.trim();
-            const pass = document.getElementById('op-password').value.trim();
-
-            if (!user || !pass) {
-                showAlert("Please enter username and passcode.");
-                return;
-            }
-
-            try {
-                const docSnap = await db.collection('system_credentials').doc('operator').get();
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    if (data.username === user && data.password === pass) {
-                        localStorage.setItem('current_user_name', user);
-                        localStorage.setItem('current_user_role', 'operator');
-                        localStorage.setItem('active_operator_session', 'true');
-                        window.location.href = 'operator.html';
-                        return;
-                    }
-                }
-
-                if (user === 'operator' && pass === 'op1234') {
-                    localStorage.setItem('current_user_name', user);
-                    localStorage.setItem('current_user_role', 'operator');
-                    localStorage.setItem('active_operator_session', 'true');
-                    window.location.href = 'operator.html';
-                } else {
-                    showAlert("Invalid Operator Credentials.");
-                }
-            } catch (err) {
-                if (user === 'operator' && pass === 'op1234') {
-                    localStorage.setItem('current_user_name', user);
-                    localStorage.setItem('current_user_role', 'operator');
-                    localStorage.setItem('active_operator_session', 'true');
-                    window.location.href = 'operator.html';
-                } else {
-                    showAlert("Authentication Error: " + err.message);
-                }
-            }
-        }
-
-        async function loginManager(e) {
-            e.preventDefault();
-            hideAlert();
-            const user = document.getElementById('mgr-username').value.trim();
-            const pass = document.getElementById('mgr-password').value.trim();
-
-            if (!user || !pass) {
-                showAlert("Please enter manager username and password.");
-                return;
-            }
-
-            try {
-                const docSnap = await db.collection('system_credentials').doc('manager').get();
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    if (data.username === user && data.password === pass) {
-                        localStorage.setItem('current_user_name', user);
-                        localStorage.setItem('current_user_role', 'manager');
-                        localStorage.setItem('active_manager_session', 'true');
-                        window.location.href = 'manager.html';
-                        return;
-                    }
-                }
-
-                if (user === 'admin' && pass === 'admin1234') {
-                    localStorage.setItem('current_user_name', user);
-                    localStorage.setItem('current_user_role', 'manager');
-                    localStorage.setItem('active_manager_session', 'true');
-                    window.location.href = 'manager.html';
-                } else {
-                    showAlert("Invalid Manager Credentials.");
-                }
-            } catch (err) {
-                if (user === 'admin' && pass === 'admin1234') {
-                    localStorage.setItem('current_user_name', user);
-                    localStorage.setItem('current_user_role', 'manager');
-                    localStorage.setItem('active_manager_session', 'true');
-                    window.location.href = 'manager.html';
-                } else {
-                    showAlert("Authentication Error: " + err.message);
-                }
-            }
-        }
-    </script>
 </body>
 </html>
