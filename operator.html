@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operator Portal - Course & Class Management</title>
-    <link rel="stylesheet" href="style.css">
     
     <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -14,80 +13,270 @@
     
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-mint: #5eead4;
+            --accent-blue: #38bdf8;
+            --danger-red: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header Navigation */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #operator-email-display {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--accent-mint);
+        }
+
+        /* Responsive 3-Column Grid for Courses & Classes */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 992px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styling & Hover Dynamics */
+        .square-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 160px;
+            cursor: pointer;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .square-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-mint);
+        }
+
+        .square-card h3, .square-card h4 {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .square-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Buttons */
+        .nav-btn, .primary-btn, .secondary-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--accent-mint), var(--accent-blue));
+            color: #0f172a;
+        }
+
+        .primary-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .logout-btn {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger-red);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-red);
+            color: #fff;
+        }
+
+        /* Table Design */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--accent-blue);
+        }
+
+        main {
+            padding: 2rem;
+            flex: 1;
+        }
+
+        .hidden { display: none !important; }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .bottom-footer {
+            text-align: center;
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Top Navigation Header -->
+    <!-- Header Navigation -->
     <header class="top-nav">
-        <div class="nav-left">
-            <h2>Operator Portal</h2>
-        </div>
+        <h2>Operator Portal</h2>
         <div class="nav-controls">
-            <button class="nav-btn" onclick="showCoursesView()">Courses</button>
-            <span id="operator-email-display" style="align-self: center; font-size: 0.85rem; margin: 0 8px;">Loading operator...</span>
-            <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
+            <button class="nav-btn secondary-btn" onclick="showCoursesView()">Courses</button>
+            <span id="operator-email-display">Authenticating...</span>
+            <button class="nav-btn secondary-btn" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
             <button id="logoutBtn" onclick="handleLogout()" class="nav-btn logout-btn">Logout</button>
         </div>
     </header>
 
-    <!-- Main Dynamic Views Container -->
+    <!-- Main Dynamic Views -->
     <main>
         
-        <!-- View 1: Courses Main View -->
-        <div id="view-courses" class="card-view">
+        <!-- View 1: Courses Main Grid -->
+        <div id="view-courses">
             <div class="dashboard-header">
                 <div>
-                    <h2>All Assigned Courses</h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Select a course to manage its classes.</p>
+                    <h2>Assigned Courses</h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem;">Select a course block to manage its classes.</p>
                 </div>
                 <button class="primary-btn" onclick="addNewCourse()">+ Add Course</button>
             </div>
-            <div id="courses-list-container" class="student-list">
+            <div id="courses-list-container" class="grid-container">
                 <p style="color: var(--text-muted);">Loading courses...</p>
             </div>
         </div>
 
-        <!-- View 2: Course Classes View -->
-        <div id="view-classes" class="card-view hidden">
+        <!-- View 2: Classes Grid -->
+        <div id="view-classes" class="hidden">
             <div class="dashboard-header">
                 <div>
-                    <button class="secondary-btn" style="padding: 4px 10px; margin-bottom: 8px; font-size: 0.8rem;" onclick="showCoursesView()">← Back to Courses</button>
+                    <button class="secondary-btn" style="margin-bottom: 8px;" onclick="showCoursesView()">← Back to Courses</button>
                     <h2 id="current-course-title">Course Classes</h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Select a class to manage registered students.</p>
                 </div>
                 <button class="primary-btn" onclick="addNewClassToCurrentCourse()">+ Add Class</button>
             </div>
-            <div id="classes-list-container" class="student-list">
+            <div id="classes-list-container" class="grid-container">
                 <p style="color: var(--text-muted);">Loading classes...</p>
             </div>
         </div>
 
-        <!-- View 3: Class Details & Student Table View -->
-        <div id="view-class-details" class="card-view hidden">
+        <!-- View 3: Class Roster Table -->
+        <div id="view-class-details" class="hidden">
             <div class="dashboard-header">
                 <div>
-                    <button class="secondary-btn" style="padding: 4px 10px; margin-bottom: 8px; font-size: 0.8rem;" onclick="showClassesView(currentCourseId, currentCourseName)">← Back to Classes</button>
+                    <button class="secondary-btn" style="margin-bottom: 8px;" onclick="showClassesView(currentCourseId, currentCourseName)">← Back to Classes</button>
                     <h2 id="current-class-title">Class Roster</h2>
                 </div>
-                <div class="button-group">
+                <div style="display: flex; gap: 10px;">
                     <button class="secondary-btn" onclick="exportClassToExcel()">📥 Download Excel</button>
                     <button class="primary-btn" onclick="addStudentToCurrentClass()">+ Add Student</button>
                 </div>
             </div>
 
-            <div style="overflow-x: auto; margin-top: 15px;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <div style="overflow-x: auto;">
+                <table>
                     <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); background-color: #f4f9f7; color: var(--text-primary);">
-                            <th style="padding: 12px 10px; font-size: 0.88rem;">Student Name</th>
-                            <th style="padding: 12px 10px; font-size: 0.88rem;">Student CPR</th>
-                            <th style="padding: 12px 10px; font-size: 0.88rem;">Tamkeen Status</th>
-                            <th style="padding: 12px 10px; font-size: 0.88rem;">Comments</th>
-                            <th style="padding: 12px 10px; font-size: 0.88rem;">Actions</th>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Student CPR</th>
+                            <th>Tamkeen Status</th>
+                            <th>Comments</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="students-table-body">
-                        <tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading students...</td></tr>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading students...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -95,23 +284,20 @@
 
     </main>
 
-    <!-- Bottom Footer -->
     <footer class="bottom-footer">
         <span id="footer-datetime">Loading date & time...</span>
     </footer>
 
-    <!-- External Script containing Firebase Configuration -->
+    <!-- Firebase Script Initialization -->
     <script src="script.js"></script>
 
     <script>
-        // App State Tracker
         let currentCourseId = null;
         let currentCourseName = "";
         let currentClassId = null;
         let currentClassName = "";
         let currentStudentsData = [];
 
-        // Helper: Escape HTML string output
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -122,63 +308,44 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Live Clock Footer
         function updateDateTime() {
             const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
             const footerEl = document.getElementById('footer-datetime');
-            if (footerEl) footerEl.innerText = now.toLocaleDateString('en-US', options);
+            if (footerEl) footerEl.innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
         setInterval(updateDateTime, 1000);
         updateDateTime();
 
-        // Language Toggle (LTR / RTL)
         function toggleLanguage() {
             const isRTL = document.body.getAttribute('dir') === 'rtl';
-            const langBtn = document.getElementById('lang-btn');
-            if (isRTL) {
-                document.body.removeAttribute('dir');
-                if (langBtn) langBtn.innerText = 'EN / AR';
-            } else {
-                document.body.setAttribute('dir', 'rtl');
-                if (langBtn) langBtn.innerText = 'AR / EN';
-            }
+            document.body.setAttribute('dir', isRTL ? 'ltr' : 'rtl');
+            document.getElementById('lang-btn').innerText = isRTL ? 'EN / AR' : 'AR / EN';
         }
 
-        // Logout handling with fallback
         function handleLogout() {
             if (typeof logoutUser === 'function') {
                 logoutUser();
-            } else if (typeof auth !== 'undefined') {
-                auth.signOut().then(() => {
-                    window.location.href = "index.html";
-                });
+            } else if (window.auth) {
+                window.auth.signOut().then(() => { window.location.href = "index.html"; });
             }
         }
 
-        // Auth State Listener
-        if (typeof auth !== 'undefined') {
-            auth.onAuthStateChanged((user) => {
-                if (user) {
-                    const userEmail = (user.email || "").toLowerCase();
-                    const targetEmail = (typeof ALLOWED_OPERATOR_EMAIL !== "undefined" ? ALLOWED_OPERATOR_EMAIL : "").toLowerCase();
-                    
-                    if (targetEmail && userEmail !== targetEmail) {
-                        alert("Access Denied: Operator authorization required.");
-                        auth.signOut();
+        // Initialize Authentication & Load Courses
+        document.addEventListener("DOMContentLoaded", () => {
+            const authInstance = window.auth || (typeof firebase !== 'undefined' && firebase.auth());
+            if (authInstance) {
+                authInstance.onAuthStateChanged((user) => {
+                    if (user) {
+                        const emailDisplay = document.getElementById('operator-email-display');
+                        if (emailDisplay) emailDisplay.innerText = user.email;
+                        showCoursesView();
+                    } else {
                         window.location.href = "index.html";
-                        return;
                     }
-                    
-                    document.getElementById('operator-email-display').innerText = `Account: ${user.email}`;
-                    showCoursesView();
-                } else {
-                    window.location.href = "index.html";
-                }
-            });
-        }
+                });
+            }
+        });
 
-        // Navigation Controllers
         function showCoursesView() {
             document.getElementById('view-courses').classList.remove('hidden');
             document.getElementById('view-classes').classList.add('hidden');
@@ -190,7 +357,6 @@
             currentCourseId = courseId;
             currentCourseName = courseName;
             document.getElementById('current-course-title').innerText = `Course: ${courseName}`;
-            
             document.getElementById('view-courses').classList.add('hidden');
             document.getElementById('view-classes').classList.remove('hidden');
             document.getElementById('view-class-details').classList.add('hidden');
@@ -201,22 +367,23 @@
             currentClassId = classId;
             currentClassName = className;
             document.getElementById('current-class-title').innerText = `${currentCourseName} → ${className}`;
-            
             document.getElementById('view-courses').classList.add('hidden');
             document.getElementById('view-classes').classList.add('hidden');
             document.getElementById('view-class-details').classList.remove('hidden');
             loadStudentsForClass(currentCourseId, classId);
         }
 
-        // Firestore: Course Management
+        // Fetch Courses into 3-column Grid
         function loadManagerCourses() {
-            if (typeof db === 'undefined') return;
-            db.collection("courses").onSnapshot((snapshot) => {
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance) return;
+
+            dbInstance.collection("courses").onSnapshot((snapshot) => {
                 const container = document.getElementById("courses-list-container");
                 container.innerHTML = "";
 
                 if (snapshot.empty) {
-                    container.innerHTML = "<p style='color: var(--text-muted);'>No courses found.</p>";
+                    container.innerHTML = "<p style='color: var(--text-muted); grid-column: 1 / -1;'>No courses found.</p>";
                     return;
                 }
 
@@ -225,32 +392,33 @@
                     const courseId = doc.id;
                     const cName = course.courseName || "Unnamed Course";
 
-                    const item = document.createElement("div");
-                    item.className = "student-item";
+                    const card = document.createElement("div");
+                    card.className = "square-card";
+                    card.onclick = () => showClassesView(courseId, cName);
 
-                    const headerDiv = document.createElement("div");
-                    headerDiv.className = "student-header";
-                    headerDiv.onclick = () => showClassesView(courseId, cName);
-
-                    headerDiv.innerHTML = `
+                    card.innerHTML = `
                         <div>
-                            <h3 style="font-size: 1rem; color: var(--text-primary);">📚 ${escapeHTML(cName)}</h3>
-                            <small style="color: var(--text-muted); font-weight: normal;">Click to open course classes</small>
+                            <h3>📚 ${escapeHTML(cName)}</h3>
+                            <p>Click to open course classes</p>
                         </div>
-                        <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Manage Classes →</button>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <span style="color: var(--accent-mint); font-size: 0.8rem; font-weight: 600;">Manage Classes →</span>
+                        </div>
                     `;
-                    item.appendChild(headerDiv);
-                    container.appendChild(item);
+                    container.appendChild(card);
                 });
+            }, (err) => {
+                console.error("Firestore error:", err);
             });
         }
 
         async function addNewCourse() {
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
             const courseName = prompt("Enter New Course Name:");
-            if (!courseName || !courseName.trim()) return;
+            if (!courseName || !courseName.trim() || !dbInstance) return;
 
             try {
-                await db.collection("courses").add({
+                await dbInstance.collection("courses").add({
                     courseName: courseName.trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -259,15 +427,17 @@
             }
         }
 
-        // Firestore: Class Management
+        // Fetch Classes into Grid
         function loadClassesForCourse(courseId) {
-            if (typeof db === 'undefined') return;
-            db.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance) return;
+
+            dbInstance.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
                 const container = document.getElementById("classes-list-container");
                 container.innerHTML = "";
 
                 if (snapshot.empty) {
-                    container.innerHTML = "<p style='color: var(--text-muted);'>No classes created under this course yet.</p>";
+                    container.innerHTML = "<p style='color: var(--text-muted); grid-column: 1 / -1;'>No classes created under this course yet.</p>";
                     return;
                 }
 
@@ -276,33 +446,33 @@
                     const classId = classDoc.id;
                     const className = classData.className || "Unnamed Class";
 
-                    const item = document.createElement("div");
-                    item.className = "student-item";
+                    const card = document.createElement("div");
+                    card.className = "square-card";
+                    card.onclick = () => showClassDetailsView(classId, className);
 
-                    const headerDiv = document.createElement("div");
-                    headerDiv.className = "student-header";
-                    headerDiv.onclick = () => showClassDetailsView(classId, className);
-
-                    headerDiv.innerHTML = `
+                    card.innerHTML = `
                         <div>
-                            <h4 style="font-size: 0.95rem; color: var(--text-primary);">🏫 Class: ${escapeHTML(className)}</h4>
-                            <small style="color: var(--text-muted); font-weight: normal;">Click to view roster and manage students</small>
+                            <h4>🏫 Class: ${escapeHTML(className)}</h4>
+                            <p>View roster & manage enrolled students</p>
                         </div>
-                        <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Open Roster →</button>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <span style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 600;">Open Roster →</span>
+                        </div>
                     `;
-                    item.appendChild(headerDiv);
-                    container.appendChild(item);
+                    container.appendChild(card);
                 });
             });
         }
 
         async function addNewClassToCurrentCourse() {
-            if (!currentCourseId) return;
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!currentCourseId || !dbInstance) return;
+
             const className = prompt("Enter Class Name (e.g., Section 1, Batch A):");
             if (!className || !className.trim()) return;
 
             try {
-                await db.collection("courses").doc(currentCourseId).collection("classes").add({
+                await dbInstance.collection("courses").doc(currentCourseId).collection("classes").add({
                     className: className.trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -311,10 +481,12 @@
             }
         }
 
-        // Firestore: Student Management
+        // Fetch Students
         function loadStudentsForClass(courseId, classId) {
-            if (typeof db === 'undefined') return;
-            db.collection("courses").doc(courseId)
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance) return;
+
+            dbInstance.collection("courses").doc(courseId)
                 .collection("classes").doc(classId)
                 .collection("students").onSnapshot((snapshot) => {
                     const tbody = document.getElementById("students-table-body");
@@ -322,7 +494,7 @@
                     currentStudentsData = [];
 
                     if (snapshot.empty) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">No students added yet.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No students registered yet.</td></tr>`;
                         return;
                     }
 
@@ -334,70 +506,48 @@
                         const status = student.tamkeenStatus || "Under Process";
                         const comment = student.comment || "";
 
-                        currentStudentsData.push({
-                            studentName: sName,
-                            cpr: cpr,
-                            tamkeenStatus: status,
-                            comment: comment
-                        });
+                        currentStudentsData.push({ studentName: sName, cpr, tamkeenStatus: status, comment });
 
                         const row = document.createElement("tr");
-                        row.style.borderBottom = "1px solid var(--border-color)";
-                        
-                        // Student Name Cell
+
                         const tdName = document.createElement("td");
-                        tdName.style.cssText = "padding: 10px; font-size: 0.85rem;";
                         tdName.textContent = sName;
                         row.appendChild(tdName);
 
-                        // CPR Cell
                         const tdCpr = document.createElement("td");
-                        tdCpr.style.cssText = "padding: 10px; font-size: 0.85rem;";
                         tdCpr.textContent = cpr;
                         row.appendChild(tdCpr);
 
-                        // Tamkeen Status Cell
                         const tdStatus = document.createElement("td");
-                        tdStatus.style.cssText = "padding: 10px; font-size: 0.85rem;";
                         const selectStatus = document.createElement("select");
-                        selectStatus.style.cssText = "padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;";
+                        selectStatus.style.cssText = "padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border-color);";
                         selectStatus.onchange = (e) => updateStudentField(studentId, 'tamkeenStatus', e.target.value);
                         
                         ['Accepted', 'Under Process', 'Withdrawn'].forEach((optVal) => {
                             const opt = document.createElement("option");
                             opt.value = optVal;
                             opt.textContent = optVal;
+                            opt.style.background = "#0f172a";
                             if (status === optVal) opt.selected = true;
                             selectStatus.appendChild(opt);
                         });
                         tdStatus.appendChild(selectStatus);
                         row.appendChild(tdStatus);
 
-                        // Comment Cell
                         const tdComment = document.createElement("td");
-                        tdComment.style.cssText = "padding: 10px; font-size: 0.85rem;";
-                        const commentSpan = document.createElement("span");
-                        if (comment) {
-                            commentSpan.textContent = comment;
-                        } else {
-                            commentSpan.innerHTML = '<i style="color:var(--text-muted);">No comments</i>';
-                        }
-                        
+                        tdComment.innerHTML = comment ? escapeHTML(comment) : '<i style="color:var(--text-muted);">No comments</i>';
                         const commentBtn = document.createElement("button");
                         commentBtn.className = "secondary-btn";
-                        commentBtn.style.cssText = "padding: 2px 6px; font-size: 0.75rem; margin-left: 6px;";
+                        commentBtn.style.cssText = "padding: 2px 6px; font-size: 0.75rem; margin-left: 8px;";
                         commentBtn.innerText = "💬 Edit";
                         commentBtn.onclick = () => addComment(studentId, comment);
-
-                        tdComment.appendChild(commentSpan);
                         tdComment.appendChild(commentBtn);
                         row.appendChild(tdComment);
 
-                        // Delete Action Cell
                         const tdAction = document.createElement("td");
-                        tdAction.style.cssText = "padding: 10px; font-size: 0.85rem;";
                         const deleteBtn = document.createElement("button");
-                        deleteBtn.className = "delete-icon-btn";
+                        deleteBtn.className = "logout-btn";
+                        deleteBtn.style.cssText = "padding: 4px 8px; font-size: 0.8rem; border-radius: 6px;";
                         deleteBtn.innerText = "🗑️ Delete";
                         deleteBtn.onclick = () => deleteStudent(studentId);
                         tdAction.appendChild(deleteBtn);
@@ -409,6 +559,9 @@
         }
 
         async function addStudentToCurrentClass() {
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance) return;
+
             const studentName = prompt("Enter Student Name:");
             if (!studentName || !studentName.trim()) return;
 
@@ -419,7 +572,7 @@
             }
 
             try {
-                await db.collection("courses").doc(currentCourseId)
+                await dbInstance.collection("courses").doc(currentCourseId)
                     .collection("classes").doc(currentClassId)
                     .collection("students").doc(cpr.trim()).set({
                         studentName: studentName.trim(),
@@ -434,12 +587,13 @@
         }
 
         async function updateStudentField(studentId, field, value) {
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance) return;
+
             try {
-                await db.collection("courses").doc(currentCourseId)
+                await dbInstance.collection("courses").doc(currentCourseId)
                     .collection("classes").doc(currentClassId)
-                    .collection("students").doc(studentId).update({
-                        [field]: value
-                    });
+                    .collection("students").doc(studentId).update({ [field]: value });
             } catch (err) {
                 alert("Failed to update: " + err.message);
             }
@@ -452,9 +606,11 @@
         }
 
         async function deleteStudent(studentId) {
-            if (!confirm("Are you sure you want to delete this student record?")) return;
+            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
+            if (!dbInstance || !confirm("Are you sure you want to delete this student record?")) return;
+
             try {
-                await db.collection("courses").doc(currentCourseId)
+                await dbInstance.collection("courses").doc(currentCourseId)
                     .collection("classes").doc(currentClassId)
                     .collection("students").doc(studentId).delete();
             } catch (err) {
@@ -462,7 +618,6 @@
             }
         }
 
-        // Excel Export Functionality
         function exportClassToExcel() {
             if (!currentStudentsData || currentStudentsData.length === 0) {
                 alert("No student data available to download.");
@@ -472,7 +627,6 @@
             const worksheet = XLSX.utils.json_to_sheet(currentStudentsData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-
             const fileName = `${currentCourseName}_${currentClassName}_Students.xlsx`.replace(/\s+/g, '_');
             XLSX.writeFile(workbook, fileName);
         }
