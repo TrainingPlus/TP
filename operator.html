@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operator Portal - Course & Class Management</title>
     
-    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
-    <!-- SheetJS for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
@@ -70,7 +68,7 @@
             color: var(--accent-mint);
         }
 
-        /* Responsive 3-Column Grid for Courses & Classes */
+        /* Responsive 3-Column Grid */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -209,7 +207,6 @@
 </head>
 <body>
 
-    <!-- Header Navigation -->
     <header class="top-nav">
         <h2>Operator Portal</h2>
         <div class="nav-controls">
@@ -220,10 +217,7 @@
         </div>
     </header>
 
-    <!-- Main Dynamic Views -->
     <main>
-        
-        <!-- View 1: Courses Main Grid -->
         <div id="view-courses">
             <div class="dashboard-header">
                 <div>
@@ -237,7 +231,6 @@
             </div>
         </div>
 
-        <!-- View 2: Classes Grid -->
         <div id="view-classes" class="hidden">
             <div class="dashboard-header">
                 <div>
@@ -251,7 +244,6 @@
             </div>
         </div>
 
-        <!-- View 3: Class Roster Table -->
         <div id="view-class-details" class="hidden">
             <div class="dashboard-header">
                 <div>
@@ -281,14 +273,12 @@
                 </table>
             </div>
         </div>
-
     </main>
 
     <footer class="bottom-footer">
         <span id="footer-datetime">Loading date & time...</span>
     </footer>
 
-    <!-- Firebase Script Initialization -->
     <script src="script.js"></script>
 
     <script>
@@ -297,6 +287,11 @@
         let currentClassId = null;
         let currentClassName = "";
         let currentStudentsData = [];
+        
+        // Active unsubscribe listeners for realtime Firestore cleanup
+        let unsubscribeCourses = null;
+        let unsubscribeClasses = null;
+        let unsubscribeStudents = null;
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -325,12 +320,14 @@
         function handleLogout() {
             if (typeof logoutUser === 'function') {
                 logoutUser();
-            } else if (window.auth) {
-                window.auth.signOut().then(() => { window.location.href = "index.html"; });
+            } else {
+                const authInstance = window.auth || (typeof firebase !== 'undefined' && firebase.auth());
+                if (authInstance) {
+                    authInstance.signOut().then(() => { window.location.href = "index.html"; });
+                }
             }
         }
 
-        // Initialize Authentication & Load Courses
         document.addEventListener("DOMContentLoaded", () => {
             const authInstance = window.auth || (typeof firebase !== 'undefined' && firebase.auth());
             if (authInstance) {
@@ -346,7 +343,13 @@
             }
         });
 
+        function clearListeners() {
+            if (unsubscribeClasses) unsubscribeClasses();
+            if (unsubscribeStudents) unsubscribeStudents();
+        }
+
         function showCoursesView() {
+            clearListeners();
             document.getElementById('view-courses').classList.remove('hidden');
             document.getElementById('view-classes').classList.add('hidden');
             document.getElementById('view-class-details').classList.add('hidden');
@@ -354,6 +357,7 @@
         }
 
         function showClassesView(courseId, courseName) {
+            clearListeners();
             currentCourseId = courseId;
             currentCourseName = courseName;
             document.getElementById('current-course-title').innerText = `Course: ${courseName}`;
@@ -364,6 +368,7 @@
         }
 
         function showClassDetailsView(classId, className) {
+            if (unsubscribeStudents) unsubscribeStudents();
             currentClassId = classId;
             currentClassName = className;
             document.getElementById('current-class-title').innerText = `${currentCourseName} → ${className}`;
@@ -373,12 +378,12 @@
             loadStudentsForClass(currentCourseId, classId);
         }
 
-        // Fetch Courses into 3-column Grid
         function loadManagerCourses() {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
             if (!dbInstance) return;
 
-            dbInstance.collection("courses").onSnapshot((snapshot) => {
+            if (unsubscribeCourses) unsubscribeCourses();
+            unsubscribeCourses = dbInstance.collection("courses").onSnapshot((snapshot) => {
                 const container = document.getElementById("courses-list-container");
                 container.innerHTML = "";
 
@@ -427,12 +432,12 @@
             }
         }
 
-        // Fetch Classes into Grid
         function loadClassesForCourse(courseId) {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
             if (!dbInstance) return;
 
-            dbInstance.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
+            if (unsubscribeClasses) unsubscribeClasses();
+            unsubscribeClasses = dbInstance.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
                 const container = document.getElementById("classes-list-container");
                 container.innerHTML = "";
 
@@ -481,12 +486,12 @@
             }
         }
 
-        // Fetch Students
         function loadStudentsForClass(courseId, classId) {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
             if (!dbInstance) return;
 
-            dbInstance.collection("courses").doc(courseId)
+            if (unsubscribeStudents) unsubscribeStudents();
+            unsubscribeStudents = dbInstance.collection("courses").doc(courseId)
                 .collection("classes").doc(classId)
                 .collection("students").onSnapshot((snapshot) => {
                     const tbody = document.getElementById("students-table-body");
@@ -535,7 +540,10 @@
                         row.appendChild(tdStatus);
 
                         const tdComment = document.createElement("td");
-                        tdComment.innerHTML = comment ? escapeHTML(comment) : '<i style="color:var(--text-muted);">No comments</i>';
+                        const textSpan = document.createElement("span");
+                        textSpan.innerHTML = comment ? escapeHTML(comment) : '<i style="color:var(--text-muted);">No comments</i>';
+                        tdComment.appendChild(textSpan);
+
                         const commentBtn = document.createElement("button");
                         commentBtn.className = "secondary-btn";
                         commentBtn.style.cssText = "padding: 2px 6px; font-size: 0.75rem; margin-left: 8px;";
@@ -555,12 +563,14 @@
 
                         tbody.appendChild(row);
                     });
+                }, (err) => {
+                    console.error("Firestore listener error:", err);
                 });
         }
 
         async function addStudentToCurrentClass() {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance) return;
+            if (!dbInstance || !currentCourseId || !currentClassId) return;
 
             const studentName = prompt("Enter Student Name:");
             if (!studentName || !studentName.trim()) return;
@@ -588,7 +598,7 @@
 
         async function updateStudentField(studentId, field, value) {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance) return;
+            if (!dbInstance || !currentCourseId || !currentClassId) return;
 
             try {
                 await dbInstance.collection("courses").doc(currentCourseId)
@@ -607,7 +617,7 @@
 
         async function deleteStudent(studentId) {
             const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance || !confirm("Are you sure you want to delete this student record?")) return;
+            if (!dbInstance || !currentCourseId || !currentClassId || !confirm("Are you sure you want to delete this student record?")) return;
 
             try {
                 await dbInstance.collection("courses").doc(currentCourseId)
