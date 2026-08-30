@@ -17,84 +17,86 @@
 </head>
 <body>
 
-    <!-- Header Navigation -->
-    <header class="header">
-        <div class="header-content">
-            <h1>Operator Portal</h1>
-            <div class="user-info" style="display: flex; align-items: center; gap: 12px;">
-                <button class="btn btn-secondary" onclick="showCoursesView()">Courses</button>
-                <span id="operator-email-display">Loading operator session...</span>
-                <button class="btn btn-secondary" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
-                <button id="logoutBtn" onclick="logoutUser()" class="btn btn-danger">Logout</button>
-            </div>
+    <!-- Top Navigation Header -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <h2>Operator Portal</h2>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="showCoursesView()">Courses</button>
+            <span id="operator-email-display" style="align-self: center; font-size: 0.85rem; margin: 0 8px;">Loading operator...</span>
+            <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
+            <button id="logoutBtn" onclick="logoutUser()" class="nav-btn logout-btn">Logout</button>
         </div>
     </header>
 
     <!-- Main Dynamic Views Container -->
-    <div class="container" style="margin-top: 20px; margin-bottom: 60px;">
+    <main>
         
         <!-- View 1: Courses Main View -->
-        <div id="view-courses" class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2>All Assigned Courses</h2>
-                <button class="btn btn-primary" onclick="addNewCourse()">+ Add Course</button>
+        <div id="view-courses" class="card-view">
+            <div class="dashboard-header">
+                <div>
+                    <h2>All Assigned Courses</h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Select a course to manage its classes.</p>
+                </div>
+                <button class="primary-btn" onclick="addNewCourse()">+ Add Course</button>
             </div>
-            <p class="subtitle" style="margin-bottom: 20px; color: #666;">Select a course to view its classes.</p>
-            <div id="courses-list-container">
-                <p class="loading-text">Loading courses...</p>
+            <div id="courses-list-container" class="student-list">
+                <p style="color: var(--text-muted);">Loading courses...</p>
             </div>
         </div>
 
         <!-- View 2: Course Classes View -->
-        <div id="view-classes" class="card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div id="view-classes" class="card-view hidden">
+            <div class="dashboard-header">
                 <div>
-                    <button class="btn btn-secondary" style="padding: 4px 10px; margin-bottom: 8px;" onclick="showCoursesView()">← Back to Courses</button>
+                    <button class="secondary-btn" style="padding: 4px 10px; margin-bottom: 8px; font-size: 0.8rem;" onclick="showCoursesView()">← Back to Courses</button>
                     <h2 id="current-course-title">Course Classes</h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Select a class to manage registered students.</p>
                 </div>
-                <button class="btn btn-primary" onclick="addNewClassToCurrentCourse()">+ Add Class</button>
+                <button class="primary-btn" onclick="addNewClassToCurrentCourse()">+ Add Class</button>
             </div>
-            <p class="subtitle" style="margin-bottom: 20px; color: #666;">Select a class to view and manage registered students.</p>
-            <div id="classes-list-container">
-                <p class="loading-text">Loading classes...</p>
+            <div id="classes-list-container" class="student-list">
+                <p style="color: var(--text-muted);">Loading classes...</p>
             </div>
         </div>
 
         <!-- View 3: Class Details & Student Table View -->
-        <div id="view-class-details" class="card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div id="view-class-details" class="card-view hidden">
+            <div class="dashboard-header">
                 <div>
-                    <button class="btn btn-secondary" style="padding: 4px 10px; margin-bottom: 8px;" onclick="showClassesView(currentCourseId, currentCourseName)">← Back to Classes</button>
+                    <button class="secondary-btn" style="padding: 4px 10px; margin-bottom: 8px; font-size: 0.8rem;" onclick="showClassesView(currentCourseId, currentCourseName)">← Back to Classes</button>
                     <h2 id="current-class-title">Class Roster</h2>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="exportClassToExcel()">📥 Download Excel</button>
-                    <button class="btn btn-primary" onclick="addStudentToCurrentClass()">+ Add Student</button>
+                <div class="button-group">
+                    <button class="secondary-btn" onclick="exportClassToExcel()">📥 Download Excel</button>
+                    <button class="primary-btn" onclick="addStudentToCurrentClass()">+ Add Student</button>
                 </div>
             </div>
 
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <div style="overflow-x: auto; margin-top: 15px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
                     <thead>
-                        <tr style="border-bottom: 2px solid #ddd; text-align: left; background: #f4f4f4;">
-                            <th style="padding: 10px;">Student Name</th>
-                            <th style="padding: 10px;">Student CPR</th>
-                            <th style="padding: 10px;">Tamkeen Status</th>
-                            <th style="padding: 10px;">Comments</th>
-                            <th style="padding: 10px;">Actions</th>
+                        <tr style="border-bottom: 2px solid var(--border-color); background-color: #f4f9f7; color: var(--text-primary);">
+                            <th style="padding: 12px 10px; font-size: 0.88rem;">Student Name</th>
+                            <th style="padding: 12px 10px; font-size: 0.88rem;">Student CPR</th>
+                            <th style="padding: 12px 10px; font-size: 0.88rem;">Tamkeen Status</th>
+                            <th style="padding: 12px 10px; font-size: 0.88rem;">Comments</th>
+                            <th style="padding: 12px 10px; font-size: 0.88rem;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="students-table-body">
-                        <tr><td colspan="5" class="loading-text" style="padding: 12px;">Loading students...</td></tr>
+                        <tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading students...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-    </div>
+    </main>
 
-    <!-- Live Date and Time Footer -->
-    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: #1f2937; color: #fff; text-align: center; padding: 10px; font-size: 14px; z-index: 1000;">
+    <!-- Bottom Footer -->
+    <footer class="bottom-footer">
         <span id="footer-datetime">Loading date & time...</span>
     </footer>
 
@@ -127,9 +129,16 @@
         setInterval(updateDateTime, 1000);
         updateDateTime();
 
-        // Language Toggle Stub
+        // Language Toggle
         function toggleLanguage() {
-            alert("Language toggled!");
+            const isRTL = document.body.getAttribute('dir') === 'rtl';
+            if (isRTL) {
+                document.body.removeAttribute('dir');
+                document.getElementById('lang-btn').innerText = 'EN / AR';
+            } else {
+                document.body.setAttribute('dir', 'rtl');
+                document.getElementById('lang-btn').innerText = 'AR / EN';
+            }
         }
 
         // Authentication & Role Control
@@ -152,11 +161,11 @@
             }
         });
 
-        // VIEW NAVIGATION
+        // VIEW NAVIGATION (Uses .hidden class from style.css)
         function showCoursesView() {
-            document.getElementById('view-courses').style.display = 'block';
-            document.getElementById('view-classes').style.display = 'none';
-            document.getElementById('view-class-details').style.display = 'none';
+            document.getElementById('view-courses').classList.remove('hidden');
+            document.getElementById('view-classes').classList.add('hidden');
+            document.getElementById('view-class-details').classList.add('hidden');
             loadManagerCourses();
         }
 
@@ -165,9 +174,9 @@
             currentCourseName = courseName;
             document.getElementById('current-course-title').innerText = `Course: ${courseName}`;
             
-            document.getElementById('view-courses').style.display = 'none';
-            document.getElementById('view-classes').style.display = 'block';
-            document.getElementById('view-class-details').style.display = 'none';
+            document.getElementById('view-courses').classList.add('hidden');
+            document.getElementById('view-classes').classList.remove('hidden');
+            document.getElementById('view-class-details').classList.add('hidden');
             loadClassesForCourse(courseId);
         }
 
@@ -176,9 +185,9 @@
             currentClassName = className;
             document.getElementById('current-class-title').innerText = `${currentCourseName} → ${className}`;
             
-            document.getElementById('view-courses').style.display = 'none';
-            document.getElementById('view-classes').style.display = 'none';
-            document.getElementById('view-class-details').style.display = 'block';
+            document.getElementById('view-courses').classList.add('hidden');
+            document.getElementById('view-classes').classList.add('hidden');
+            document.getElementById('view-class-details').classList.remove('hidden');
             loadStudentsForClass(currentCourseId, classId);
         }
 
@@ -189,7 +198,7 @@
                 container.innerHTML = "";
 
                 if (snapshot.empty) {
-                    container.innerHTML = "<p>No courses found.</p>";
+                    container.innerHTML = "<p style='color: var(--text-muted);'>No courses found.</p>";
                     return;
                 }
 
@@ -198,17 +207,18 @@
                     const courseId = doc.id;
                     const cName = course.courseName || "Unnamed Course";
 
-                    const card = document.createElement("div");
-                    card.style.cssText = "background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e5e7eb;";
-                    card.innerHTML = `
-                        <div>
-                            <h3 style="margin: 0;">📚 ${escapeHTML(cName)}</h3>
-                            <small style="color: #666;">Click to open course classes</small>
+                    const item = document.createElement("div");
+                    item.className = "student-item";
+                    item.innerHTML = `
+                        <div class="student-header" onclick="showClassesView('${courseId}', '${escapeHTML(cName).replace(/'/g, "\\'")}')">
+                            <div>
+                                <h3 style="font-size: 1rem; color: var(--text-primary);">📚 ${escapeHTML(cName)}</h3>
+                                <small style="color: var(--text-muted); font-weight: normal;">Click to open course classes</small>
+                            </div>
+                            <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Manage Classes →</button>
                         </div>
-                        <button class="btn btn-secondary" style="padding: 6px 12px;">Manage Classes →</button>
                     `;
-                    card.onclick = () => showClassesView(courseId, cName);
-                    container.appendChild(card);
+                    container.appendChild(item);
                 });
             });
         }
@@ -222,7 +232,6 @@
                     courseName: courseName.trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Course added successfully!");
             } catch (err) {
                 alert("Error adding course: " + err.message);
             }
@@ -235,7 +244,7 @@
                 container.innerHTML = "";
 
                 if (snapshot.empty) {
-                    container.innerHTML = "<p class='no-data'>No classes created under this course yet.</p>";
+                    container.innerHTML = "<p style='color: var(--text-muted);'>No classes created under this course yet.</p>";
                     return;
                 }
 
@@ -244,17 +253,18 @@
                     const classId = classDoc.id;
                     const className = classData.className || "Unnamed Class";
 
-                    const card = document.createElement("div");
-                    card.style.cssText = "background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e5e7eb;";
-                    card.innerHTML = `
-                        <div>
-                            <h4 style="margin: 0;">🏫 Class: ${escapeHTML(className)}</h4>
-                            <small style="color: #666;">Click to view roster and manage students</small>
+                    const item = document.createElement("div");
+                    item.className = "student-item";
+                    item.innerHTML = `
+                        <div class="student-header" onclick="showClassDetailsView('${classId}', '${escapeHTML(className).replace(/'/g, "\\'")}')">
+                            <div>
+                                <h4 style="font-size: 0.95rem; color: var(--text-primary);">🏫 Class: ${escapeHTML(className)}</h4>
+                                <small style="color: var(--text-muted); font-weight: normal;">Click to view roster and manage students</small>
+                            </div>
+                            <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Open Roster →</button>
                         </div>
-                        <button class="btn btn-secondary" style="padding: 6px 12px;">Open Roster →</button>
                     `;
-                    card.onclick = () => showClassDetailsView(classId, className);
-                    container.appendChild(card);
+                    container.appendChild(item);
                 });
             });
         }
@@ -269,7 +279,6 @@
                     className: className.trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Class added successfully!");
             } catch (err) {
                 alert("Error adding class: " + err.message);
             }
@@ -285,7 +294,7 @@
                     currentStudentsData = [];
 
                     if (snapshot.empty) {
-                        tbody.innerHTML = `<tr><td colspan="5" class="no-data" style="padding: 12px;">No students added yet.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">No students added yet.</td></tr>`;
                         return;
                     }
 
@@ -305,23 +314,23 @@
                         });
 
                         const row = document.createElement("tr");
-                        row.style.borderBottom = "1px solid #eee";
+                        row.style.borderBottom = "1px solid var(--border-color)";
                         row.innerHTML = `
-                            <td style="padding: 8px;">${escapeHTML(sName)}</td>
-                            <td style="padding: 8px;">${escapeHTML(cpr)}</td>
-                            <td style="padding: 8px;">
-                                <select onchange="updateStudentField('${studentId}', 'tamkeenStatus', this.value)" style="padding: 4px; border-radius: 4px;">
+                            <td style="padding: 10px; font-size: 0.85rem;">${escapeHTML(sName)}</td>
+                            <td style="padding: 10px; font-size: 0.85rem;">${escapeHTML(cpr)}</td>
+                            <td style="padding: 10px; font-size: 0.85rem;">
+                                <select onchange="updateStudentField('${studentId}', 'tamkeenStatus', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;">
                                     <option value="Accepted" ${status === 'Accepted' ? 'selected' : ''}>Accepted</option>
                                     <option value="Under Process" ${status === 'Under Process' ? 'selected' : ''}>Under Process</option>
                                     <option value="Withdrawn" ${status === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
                                 </select>
                             </td>
-                            <td style="padding: 8px;">
-                                <span>${escapeHTML(comment) || '<i style="color:#aaa;">No comments</i>'}</span>
-                                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; margin-left: 5px;" onclick="addComment('${studentId}', '${escapeHTML(comment).replace(/'/g, "\\'")}')">💬 Comment</button>
+                            <td style="padding: 10px; font-size: 0.85rem;">
+                                <span>${escapeHTML(comment) || '<i style="color:var(--text-muted);">No comments</i>'}</span>
+                                <button class="secondary-btn" style="padding: 2px 6px; font-size: 0.75rem; margin-left: 6px;" onclick="addComment('${studentId}', '${escapeHTML(comment).replace(/'/g, "\\'")}')">💬 Edit</button>
                             </td>
-                            <td style="padding: 8px;">
-                                <button class="btn btn-danger" style="padding: 2px 6px; font-size: 12px;" onclick="deleteStudent('${studentId}')">🗑️ Delete</button>
+                            <td style="padding: 10px; font-size: 0.85rem;">
+                                <button class="delete-icon-btn" onclick="deleteStudent('${studentId}')">🗑️ Delete</button>
                             </td>
                         `;
                         tbody.appendChild(row);
