@@ -3,132 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operator Dashboard - Training Plus Institute</title>
+    <title>Operator Portal - Course & Class Management</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</head>
-<body class="dashboard-body">
-    <script>
-        const role = localStorage.getItem('current_user_role');
-        const session = localStorage.getItem('active_operator_session');
-        if (role !== 'operator' || !session) {
-            window.location.href = 'index.html';
-        }
-    </script>
-
-    <header class="app-header">
-        <div class="nav-left">
-            <h2>Operator Portal</h2>
-        </div>
-        <div class="nav-right">
-            <span class="user-badge" id="op-display-name">Operator</span>
-            <button class="nav-btn logout-btn" onclick="logoutOperator()">Logout</button>
-        </div>
-    </header>
-
-    <main class="main-content">
-        <div class="card-view">
-            <div class="directory-header">
-                <h3>Global Directory Overview</h3>
-                <button class="nav-btn download-btn" onclick="downloadGlobalExcel()">Export All Students (Excel)</button>
-            </div>
-            <p style="color: #718096; margin-bottom: 15px;">Monitor and manage student records across all accounts.</p>
-            
-            <div id="operator-student-list" class="student-list">
-                <p style="text-align: center; color: #a0aec0;">Loading global student records...</p>
-            </div>
-        </div>
-    </main>
-
-    <!-- Firebase SDK Compat libraries -->
+    
+    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="header-container">
+            <h1>Operator Portal</h1>
+            <div class="user-controls">
+                <span id="operator-email-display">Loading operator session...</span>
+                <button id="logoutBtn" onclick="logoutUser()" class="btn-logout">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="portal-section">
+            <h2>Assigned Courses & Classes</h2>
+            <p class="subtitle">View manager-created courses, add classes, and manage student Tamkeen status.</p>
+            
+            <div id="courses-list-container" class="courses-container">
+                <p class="loading-text">Loading courses from manager...</p>
+            </div>
+        </section>
+    </main>
 
     <script src="script.js"></script>
     <script>
-        const name = localStorage.getItem('current_user_name');
-        if (name) document.getElementById('op-display-name').textContent = name;
-
-        function logoutOperator() {
-            localStorage.removeItem('active_operator_session');
-            localStorage.removeItem('current_user_role');
-            localStorage.removeItem('current_user_name');
-            window.location.href = 'index.html';
-        }
-
-        let globalStudents = [];
-
-        function loadGlobalStudents() {
-            db.collection('students').onSnapshot(snapshot => {
-                globalStudents = [];
-                snapshot.forEach(doc => {
-                    globalStudents.push({ id: doc.id, ...doc.data() });
-                });
-                renderOperatorDirectory(globalStudents);
-            });
-        }
-
-        function renderOperatorDirectory(list) {
-            const container = document.getElementById('operator-student-list');
-            if (!container) return;
-            container.innerHTML = "";
-
-            if (list.length === 0) {
-                container.innerHTML = `<p style="text-align:center; color:#a0aec0; padding:20px;">No records available.</p>`;
-                return;
+        // Restrict page access strictly to the Operator
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                const userEmail = (user.email || "").toLowerCase();
+                if (userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+                    alert("Access Denied: You are not authorized to view the Operator portal.");
+                    auth.signOut();
+                    window.location.href = "index.html";
+                    return;
+                }
+                
+                document.getElementById('operator-email-display').innerText = `Operator: ${user.email}`;
+                loadManagerCourses();
+            } else {
+                window.location.href = "index.html";
             }
-
-            list.forEach(student => {
-                const item = document.createElement('div');
-                item.className = "student-item";
-                item.innerHTML = `
-                    <div class="student-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                        <span><strong>${student.name || 'Unnamed Student'}</strong> (${student.cpr})</span>
-                        <span style="font-size:0.8rem; color:#718096;">Added By: ${student.createdByName || student.added_by || 'Unknown'}</span>
-                    </div>
-                    <div class="student-details hidden">
-                        <div class="grid-form">
-                            <label>Full Name:
-                                <input type="text" value="${student.name || ''}" onchange="updateStudentField('${student.id}', 'name', this.value)">
-                            </label>
-                            <label>Student Number:
-                                <input type="text" value="${student.studentNumber || ''}" onchange="updateStudentField('${student.id}', 'studentNumber', this.value)">
-                            </label>
-                            <label>Major:
-                                <input type="text" value="${student.major || ''}" onchange="updateStudentField('${student.id}', 'major', this.value)">
-                            </label>
-                            <label>CPR Number:
-                                <input type="text" value="${student.cpr}" readonly>
-                            </label>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function downloadGlobalExcel() {
-            if (globalStudents.length === 0) {
-                alert("No student records available.");
-                return;
-            }
-            const rows = globalStudents.map(s => ({
-                "Full Name": s.name || '',
-                "Student Number": s.studentNumber || '',
-                "Major": s.major || '',
-                "CPR": s.cpr || '',
-                "Added By": s.createdByName || s.added_by || ''
-            }));
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, "Global Student Records");
-            XLSX.writeFile(wb, `Global_Students_${new Date().toISOString().slice(0, 10)}.xlsx`);
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            loadGlobalStudents();
         });
+
+        // Load courses added by Manager
+        function loadManagerCourses() {
+            db.collection("courses").onSnapshot((snapshot) => {
+                const container = document.getElementById("courses-list-container");
+                container.innerHTML = "";
+
+                if (snapshot.empty) {
+                    container.innerHTML = "<p>No courses have been added by the manager yet.</p>";
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const course = doc.data();
+                    const courseId = doc.id;
+
+                    const courseCard = document.createElement("div");
+                    courseCard.className = "course-card";
+                    courseCard.innerHTML = `
+                        <div class="course-header">
+                            <h3>${escapeHTML(course.courseName || "Unnamed Course")}</h3>
+                            <button class="btn-primary" onclick="addClassToCourse('${courseId}')">+ Add Class</button>
+                        </div>
+                        <div id="classes-container-${courseId}" class="classes-container">
+                            <p class="loading-text">Loading classes...</p>
+                        </div>
+                    `;
+                    container.appendChild(courseCard);
+
+                    loadClassesForCourse(courseId);
+                });
+            });
+        }
+
+        // Add a new Class under a specific Course
+        async function addClassToCourse(courseId) {
+            const className = prompt("Enter Class Name (e.g., Batch A, Class 101):");
+            if (!className || !className.trim()) return;
+
+            try {
+                await db.collection("courses").doc(courseId).collection("classes").add({
+                    className: className.trim(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("Class added successfully!");
+            } catch (error) {
+                console.error("Error adding class:", error);
+                alert("Failed to add class: " + error.message);
+            }
+        }
+
+        // Load Classes and Student Tables for a Course
+        function loadClassesForCourse(courseId) {
+            db.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
+                const classesContainer = document.getElementById(`classes-container-${courseId}`);
+                classesContainer.innerHTML = "";
+
+                if (snapshot.empty) {
+                    classesContainer.innerHTML = "<p class='no-data'>No classes added for this course yet.</p>";
+                    return;
+                }
+
+                snapshot.forEach((classDoc) => {
+                    const classData = classDoc.data();
+                    const classId = classDoc.id;
+
+                    const classBox = document.createElement("div");
+                    classBox.className = "class-box";
+                    classBox.innerHTML = `
+                        <div class="class-title-row">
+                            <h4>Class: ${escapeHTML(classData.className)}</h4>
+                            <button class="btn-secondary" onclick="addStudentToClass('${courseId}', '${classId}')">+ Add Student</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="student-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>Student CPR</th>
+                                        <th>Tamkeen Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-tbody-${courseId}-${classId}">
+                                    <tr><td colspan="3" class="loading-text">Loading students...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    classesContainer.appendChild(classBox);
+
+                    loadStudentsForClass(courseId, classId);
+                });
+            });
+        }
+
+        // Add a Student to a Class
+        async function addStudentToClass(courseId, classId) {
+            const studentName = prompt("Enter Student Name:");
+            if (!studentName || !studentName.trim()) return;
+
+            const cpr = prompt("Enter Student CPR (9 Digits):");
+            if (!cpr || !/^\d{9}$/.test(cpr.trim())) {
+                alert("Please enter a valid 9-digit CPR number.");
+                return;
+            }
+
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId)
+                    .collection("students").doc(cpr.trim()).set({
+                        studentName: studentName.trim(),
+                        cpr: cpr.trim(),
+                        tamkeenStatus: "Under Process",
+                        addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+            } catch (error) {
+                console.error("Error adding student:", error);
+                alert("Failed to add student: " + error.message);
+            }
+        }
+
+        // Load Students and render the Tamkeen Status dropdown
+        function loadStudentsForClass(courseId, classId) {
+            db.collection("courses").doc(courseId)
+                .collection("classes").doc(classId)
+                .collection("students").onSnapshot((snapshot) => {
+                    const tbody = document.getElementById(`students-tbody-${courseId}-${classId}`);
+                    tbody.innerHTML = "";
+
+                    if (snapshot.empty) {
+                        tbody.innerHTML = `<tr><td colspan="3" class="no-data">No students registered in this class.</td></tr>`;
+                        return;
+                    }
+
+                    snapshot.forEach((studentDoc) => {
+                        const student = studentDoc.data();
+                        const studentId = studentDoc.id;
+                        const currentStatus = student.tamkeenStatus || "Under Process";
+
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${escapeHTML(student.studentName || "N/A")}</td>
+                            <td>${escapeHTML(student.cpr || studentId)}</td>
+                            <td>
+                                <select class="status-select status-${currentStatus.toLowerCase().replace(/\s+/g, '-')}" 
+                                        onchange="updateTamkeenStatus('${courseId}', '${classId}', '${studentId}', this.value)">
+                                    <option value="Accepted" ${currentStatus === 'Accepted' ? 'selected' : ''}>Accepted</option>
+                                    <option value="Under Process" ${currentStatus === 'Under Process' ? 'selected' : ''}>Under Process</option>
+                                    <option value="Withdrawn" ${currentStatus === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
+                                </select>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+
+        // Update student's Tamkeen status in Firestore
+        async function updateTamkeenStatus(courseId, classId, studentId, newStatus) {
+            try {
+                await db.collection("courses").doc(courseId)
+                    .collection("classes").doc(classId)
+                    .collection("students").doc(studentId).update({
+                        tamkeenStatus: newStatus
+                    });
+            } catch (error) {
+                console.error("Error updating Tamkeen status:", error);
+                alert("Failed to update status: " + error.message);
+            }
+        }
     </script>
 </body>
 </html>
