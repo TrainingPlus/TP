@@ -9,10 +9,10 @@
     <!-- SheetJS Library for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Firebase App & Services -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase App & Services (Aligned to v8.10.1 to match operator.html) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
@@ -76,29 +76,36 @@
 
         <!-- Main Home Directory View -->
         <div id="view-home" class="card-view hidden">
-            <div class="directory-header">
+            <div class="directory-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 data-i18n="student_directory">Student Directory</h2>
-                <button class="primary-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR</button>
+                <button class="primary-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR / Student</button>
             </div>
             <div id="student-container" class="student-list">
                 <!-- Dynamic student cards rendering here -->
             </div>
         </div>
 
-        <!-- Add CPR Form View -->
+        <!-- Add CPR & Student Form View -->
         <div id="view-add-cpr" class="card-view hidden">
-            <h2 data-i18n="register_cpr">Register New CPR</h2>
-            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
+            <h2 data-i18n="register_cpr">Register New Student Record</h2>
+            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter full student details to register into the system.</p>
 
-            <div class="form-group">
-                <label for="cpr-input" data-i18n="cpr_label">CPR Number (9 Digits):</label>
-                <input type="text" id="cpr-input" maxlength="9" placeholder="e.g. 010203040">
-            </div>
+            <form id="registration-form" onsubmit="event.preventDefault(); addStudentCPR();">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="student-name-input">Student Full Name:</label>
+                    <input type="text" id="student-name-input" placeholder="e.g. John Doe" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                </div>
 
-            <div class="button-group">
-                <button class="primary-btn" data-i18n="btn_submit" onclick="addStudentCPR()">Submit Record</button>
-                <button class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
-            </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="cpr-input" data-i18n="cpr_label">CPR Number (9 Digits):</label>
+                    <input type="text" id="cpr-input" maxlength="9" placeholder="e.g. 010203040" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                </div>
+
+                <div class="button-group" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="primary-btn" data-i18n="btn_submit">Submit Record</button>
+                    <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
+                </div>
+            </form>
         </div>
 
         <!-- CPR Success View -->
@@ -106,7 +113,7 @@
             <h2 data-i18n="cpr_success_title">CPR Added Successfully!</h2>
             <p class="subtitle" data-i18n="cpr_success_subtitle">Would you like to add another student CPR record?</p>
 
-            <div class="button-group justify-center">
+            <div class="button-group justify-center" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
                 <button class="primary-btn" data-i18n="btn_add_another" onclick="resetAndAddAnotherCPR()">+ Add Another CPR</button>
                 <button class="secondary-btn" data-i18n="btn_go_directory" onclick="showView('view-home')">Go to Directory</button>
             </div>
@@ -140,9 +147,9 @@
 
     <!-- Account Details Modal -->
     <div id="account-modal" class="modal-backdrop hidden">
-        <div class="modal-card">
+        <div class="modal-card" style="background: white; padding: 24px; border-radius: 8px; max-width: 400px; margin: auto;">
             <h3 data-i18n="modal_account_title">User Account</h3>
-            <div class="modal-body">
+            <div class="modal-body" style="margin-top: 15px;">
                 <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid"></span></p>
                 <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username"></span></p>
                 <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email"></span></p>
