@@ -24,7 +24,7 @@ let studentList = [];
 let currentLang = 'en';
 const pageLoadedAt = new Date();
 
-// Reference doc for global session locks
+// Reference doc for global single-session locks
 const sessionLockDoc = db.collection("system_status").doc("active_sessions");
 
 // ==========================================
@@ -167,11 +167,9 @@ auth.onAuthStateChanged((user) => {
 // 3. ROLE SELECTION & AUTHENTICATION
 // ==========================================
 
-// Handle visual selection of role button
 function selectRole(role) {
     selectedRoleChoice = role;
 
-    // Reset button styles
     ['manager', 'operator', 'employee'].forEach(r => {
         const btn = document.getElementById(`role-btn-${r}`);
         const form = document.getElementById(`form-${r}`);
@@ -183,7 +181,6 @@ function selectRole(role) {
         if (form) form.classList.add('hidden');
     });
 
-    // Highlight selected button
     const activeBtn = document.getElementById(`role-btn-${role}`);
     if (activeBtn) {
         activeBtn.style.background = '#2b6cb0';
@@ -191,12 +188,11 @@ function selectRole(role) {
         activeBtn.style.borderColor = '#2b6cb0';
     }
 
-    // Show prompt off, show selected form
     document.getElementById('role-prompt')?.classList.add('hidden');
     document.getElementById(`form-${role}`)?.classList.remove('hidden');
 }
 
-// Manager and Operator Single-Session Sign In
+// Single-Session Enforcement for Manager and Operator
 async function signInRole(event, role) {
     event.preventDefault();
 
@@ -205,21 +201,25 @@ async function signInRole(event, role) {
 
     try {
         const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+        
+        // Check active session lock in Firestore
         const docSnap = await sessionLockDoc.get();
 
         if (docSnap.exists) {
             const activeUid = docSnap.data()[lockKey];
             if (activeUid) {
-                alert(`Sign-in rejected: A ${role} is already signed in. Only one active session is allowed.`);
+                alert(`Sign-in rejected: A ${role} is already signed in. Only one active ${role} session is allowed.`);
                 return;
             }
         }
 
+        // Authenticate credentials via Firebase
         const credential = await auth.signInWithEmailAndPassword(email, password);
         const uid = credential.user.uid;
 
-        // Lock session in Firestore
+        // Lock session in Firestore for this role
         await sessionLockDoc.set({ [lockKey]: uid }, { merge: true });
+        
         sessionStorage.setItem("userRole", role.charAt(0).toUpperCase() + role.slice(1));
         currentRole = role.charAt(0).toUpperCase() + role.slice(1);
 
@@ -229,7 +229,7 @@ async function signInRole(event, role) {
     }
 }
 
-// Employee Google Sign-In
+// Employee Google Sign-In (Allows multiple concurrent users)
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
@@ -271,6 +271,8 @@ function updateUserUI(isLoggedIn) {
 
 async function logoutUser() {
     const normalizedRole = (currentRole || "").toLowerCase();
+    
+    // Release active lock if logging out as Manager or Operator
     if (normalizedRole === "manager" || normalizedRole === "operator") {
         const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
         try {
@@ -279,6 +281,7 @@ async function logoutUser() {
             console.error("Error clearing session lock:", e);
         }
     }
+    
     sessionStorage.removeItem("userRole");
     auth.signOut();
 }
