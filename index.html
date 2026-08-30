@@ -32,74 +32,47 @@
     </header>
 
     <main>
-        <!-- Auth View -->
-        <section id="view-auth" class="card-view" style="max-width: 440px; margin: 40px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+
+        <!-- Auth View (3-Way Sign In) -->
+        <section id="view-auth" class="card-view" style="max-width: 480px; margin: 40px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
             <h2 style="color: #2b6cb0; margin-bottom: 8px;" data-i18n="welcome_title">Welcome</h2>
-            <p style="color: #718096; margin-bottom: 20px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Select access type to sign in</p>
+            <p style="color: #718096; margin-bottom: 24px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Sign in to access the Training Plus Student Directory</p>
 
-            <!-- Role Selector Tabs -->
-            <div class="role-selector" style="display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-                <button type="button" id="tab-operator" class="role-tab active" onclick="switchLoginTab('operator')" 
-                    style="flex: 1; padding: 8px 4px; border: none; background: #2b6cb0; color: white; border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
-                    Operator
-                </button>
-                <button type="button" id="tab-manager" class="role-tab" onclick="switchLoginTab('manager')" 
-                    style="flex: 1; padding: 8px 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
-                    Manager
-                </button>
-                <button type="button" id="tab-employee" class="role-tab" onclick="switchLoginTab('employee')" 
-                    style="flex: 1; padding: 8px 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
-                    Employee
-                </button>
+            <!-- 1. Manager Login Card -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #f8fafc; text-align: left;">
+                <h3 style="margin-bottom: 10px; color: #2d3748; font-size: 1rem;">Manager Access</h3>
+                <form onsubmit="signInRole(event, 'manager'); return false;" style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="email" id="manager-email" placeholder="Manager Email" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                    <input type="password" id="manager-password" placeholder="Password" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                    <button type="submit" class="primary-btn" style="padding: 8px; font-size: 0.88rem;">Sign in as Manager</button>
+                </form>
             </div>
 
-            <!-- Single Active Session Info Notice -->
-            <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 10px; margin-bottom: 20px; text-align: left; border-radius: 4px;">
-                <p style="margin: 0; color: #2b6cb0; font-size: 0.78rem; font-weight: 500;">
-                    ℹ️ <strong>Single User Access:</strong> Only one person can be signed in at a time.
-                </p>
+            <!-- 2. Operator Login Card -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #f8fafc; text-align: left;">
+                <h3 style="margin-bottom: 10px; color: #2d3748; font-size: 1rem;">Operator Access</h3>
+                <form onsubmit="signInRole(event, 'operator'); return false;" style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="email" id="operator-email" placeholder="Operator Email" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                    <input type="password" id="operator-password" placeholder="Password" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                    <button type="submit" class="primary-btn" style="padding: 8px; font-size: 0.88rem;">Sign in as Operator</button>
+                </form>
             </div>
 
-            <!-- Email & Password Form (Operator & Manager) -->
-            <form id="form-email-auth" onsubmit="handleEmailAuth(event)" style="display: block; text-align: left;">
-                <input type="hidden" id="selected-role" value="operator">
-                
-                <div style="margin-bottom: 14px;">
-                    <label for="auth-email" style="display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 4px;">Email Address</label>
-                    <input type="email" id="auth-email" required placeholder="name@trainingplus.com" 
-                        style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 18px;">
-                    <label for="auth-password" style="display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 4px;">Password (Letters & Numbers)</label>
-                    <input type="password" id="auth-password" required 
-                        pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$" 
-                        title="Password must be at least 6 characters and contain both letters and numbers."
-                        placeholder="e.g. Pass1234" 
-                        style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;">
-                    <span style="font-size: 0.75rem; color: #64748b;">Must include both letters and numbers (min. 6 characters)</span>
-                </div>
-
-                <button type="submit" id="btn-email-submit" 
-                    style="width: 100%; padding: 11px; background: #2b6cb0; border: none; border-radius: 6px; color: #ffffff; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">
-                    Sign in as Operator
-                </button>
-            </form>
-
-            <!-- Google Authentication Section (Employee Only) -->
-            <div id="section-google-auth" style="display: none;">
+            <!-- 3. Employee Google Sign-In Card -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; text-align: left;">
+                <h3 style="margin-bottom: 10px; color: #2d3748; font-size: 1rem;">Employee Access</h3>
                 <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
-                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;"
-                    onmouseover="this.style.background='#f8fafc'" 
+                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
+                    onmouseover="this.style.background='#f1f5f9'" 
                     onmouseout="this.style.background='#ffffff'"
                 >
-                    <svg width="20" height="20" viewBox="0 0 24 24">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                     </svg>
-                    <span>Sign in with Google (Employee)</span>
+                    <span data-i18n="btn_google">Sign in with Google</span>
                 </button>
             </div>
         </section>
@@ -150,8 +123,8 @@
             <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
             <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
             <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
-            <p><strong data-i18n="lbl_role">Role:</strong> <span id="modal-role">--</span></p>
-            <p style="margin-bottom: 16px;"><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
+            <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
+            <p style="margin-bottom: 16px;"><strong>Role:</strong> <span id="modal-role">--</span></p>
         </div>
     </div>
 
@@ -161,7 +134,7 @@
             💬
             <span id="chat-unread-badge" class="hidden">0</span>
         </button>
-        
+    
         <div id="chat-window" class="chat-box hidden">
             <div class="chat-header">
                 <span data-i18n="chat_header">Team Group Chat</span>
