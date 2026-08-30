@@ -18,10 +18,13 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let currentUserData = null;
+let currentRole = null;
 let studentList = [];
 let currentLang = 'en';
-// Track initial page load time to prevent old unread badge alerts
 const pageLoadedAt = new Date();
+
+// Reference doc for global session locks
+const sessionLockDoc = db.collection("system_status").doc("active_sessions");
 
 // ==========================================
 // 2. LANGUAGE TRANSLATIONS (ENGLISH / ARABIC)
@@ -148,58 +151,61 @@ function applyLanguageTranslations() {
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUserData = user;
+        currentRole = sessionStorage.getItem("userRole") || "Employee";
         updateUserUI(true);
         listenToStudentDirectory();
         listenToGroupChat();
     } else {
         currentUserData = null;
+        currentRole = null;
         updateUserUI(false);
     }
 });
 
 // ==========================================
-// 3. USER UI & AUTH UPDATES (WITH ROLE INTEGRATION)
+// 3. USER UI & 3-WAY AUTHENTICATION
 // ==========================================
 
-// Dedicated Google Sign-In for Employee Role
-async function signInWithGoogleEmployee() {
-    const provider = new firebase.auth.GoogleAuthProvider();
+// Manager and Operator Single-Session Sign In
+async function signInRole(event, role) {
+    event.preventDefault();
+
+    const email = document.getElementById(`${role}-email`).value.trim();
+    const password = document.getElementById(`${role}-password`).value.trim();
+
     try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
+        const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+        const docSnap = await sessionLockDoc.get();
 
-        // Session storage setup for system navigation
-        localStorage.setItem('current_user_name', user.displayName || user.email.split('@')[0]);
-        localStorage.setItem('current_user_role', 'employee');
-
-        // Store user credentials in Firestore collection
-        await db.collection('users').doc(user.uid).set({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            role: 'employee',
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-
-        // Redirect directly to employee view
-        window.location.href = 'employee.html';
-    } catch (error) {
-        console.error("Employee Google Sign-In Error:", error);
-        const alertBox = document.getElementById('alert-box');
-        if (alertBox) {
-            alertBox.textContent = "Google Sign-In Failed: " + error.message;
-            alertBox.style.display = 'block';
-        } else {
-            alert("Sign-In Failed: " + error.message);
+        if (docSnap.exists) {
+            const activeUid = docSnap.data()[lockKey];
+            if (activeUid) {
+                alert(`Sign-in rejected: A ${role} is already signed in. Only one active session is allowed.`);
+                return;
+            }
         }
+
+        const credential = await auth.signInWithEmailAndPassword(email, password);
+        const uid = credential.user.uid;
+
+        // Lock session in Firestore
+        await sessionLockDoc.set({ [lockKey]: uid }, { merge: true });
+        sessionStorage.setItem("userRole", role);
+        currentRole = role;
+
+    } catch (error) {
+        console.error(`${role} Login Error:`, error);
+        alert(`Sign-In Failed: ${error.message}`);
     }
 }
 
-// Default Google Sign-In Function
+// Employee Google Sign-In
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
         await auth.signInWithPopup(provider);
+        sessionStorage.setItem("userRole", "employee");
+        currentRole = "Employee";
     } catch (error) {
         console.error("Google Sign-In Error:", error);
         alert("Sign-In Failed: " + error.message);
@@ -216,6 +222,7 @@ function updateUserUI(isLoggedIn) {
         const idEl = document.getElementById('modal-userid');
         const nameEl = document.getElementById('modal-username');
         const emailEl = document.getElementById('modal-email');
+        const roleEl = document.getElementById('modal-role');
 
         const simpleUserId = currentUserData.uid 
             ? `#USR-${currentUserData.uid.substring(0, 6).toUpperCase()}`
@@ -224,6 +231,7 @@ function updateUserUI(isLoggedIn) {
         if (idEl) idEl.innerText = simpleUserId;
         if (nameEl) nameEl.innerText = currentUserData.displayName || currentUserData.email?.split('@')[0] || "User";
         if (emailEl) emailEl.innerText = currentUserData.email || '';
+        if (roleEl) roleEl.innerText = currentRole || 'Employee';
 
         showView('view-home');
     } else {
@@ -231,19 +239,17 @@ function updateUserUI(isLoggedIn) {
     }
 }
 
-function logoutUser() {
-    const role = localStorage.getItem('current_user_role');
-    
-    // Clear Session lock flags upon logout
-    if (role === 'manager') localStorage.removeItem('active_manager_session');
-    if (role === 'operator') localStorage.removeItem('active_operator_session');
-    
-    localStorage.removeItem('current_user_name');
-    localStorage.removeItem('current_user_role');
-
-    auth.signOut().then(() => {
-        window.location.href = 'index.html';
-    });
+async function logoutUser() {
+    if (currentRole === "manager" || currentRole === "operator") {
+        const lockKey = currentRole === 'manager' ? 'active_manager' : 'active_operator';
+        try {
+            await sessionLockDoc.set({ [lockKey]: null }, { merge: true });
+        } catch (e) {
+            console.error("Error clearing session lock:", e);
+        }
+    }
+    sessionStorage.removeItem("userRole");
+    auth.signOut();
 }
 
 // ==========================================
@@ -255,7 +261,6 @@ async function addStudentCPR() {
 
     const cpr = cprInput.value.trim();
 
-    // 1. Validate 9-digit CPR format
     if (!/^\d{9}$/.test(cpr)) {
         const errorMsg = (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang].alert_cpr_length) 
             ? translations[currentLang].alert_cpr_length 
@@ -278,14 +283,12 @@ async function addStudentCPR() {
         const docRef = db.collection("students").doc(cpr);
         const docSnap = await docRef.get();
 
-        // 2. Check if CPR already exists
         if (docSnap.exists) {
             const existingData = docSnap.data();
             
             const creatorUid = existingData.createdByUid;
             const creatorEmail = existingData.createdByEmail || existingData.added_by;
 
-            // Check if added by current user
             const isMyRecord = (creatorUid && creatorUid === currentUid) || 
                                (creatorEmail && creatorEmail === currentEmail);
 
@@ -304,7 +307,7 @@ async function addStudentCPR() {
                     } else if (rawEmail) {
                         username = rawEmail;
                     } else {
-                        username = "Mada Saleh";
+                        username = "mada saleh";
                     }
                 }
 
@@ -313,7 +316,6 @@ async function addStudentCPR() {
             return;
         }
 
-        // 3. Save new record storing current user's name
         await docRef.set({
             cpr: cpr,
             studentNumber: cpr,
@@ -337,13 +339,9 @@ async function addStudentCPR() {
 
 function resetAndAddAnotherCPR() {
     const cprInput = document.getElementById('cpr-input');
-    if (cprInput) {
-        cprInput.value = '';
-    }
+    if (cprInput) cprInput.value = '';
     showView('view-add-cpr');
-    setTimeout(() => {
-        if (cprInput) cprInput.focus();
-    }, 100);
+    setTimeout(() => { if (cprInput) cprInput.focus(); }, 100);
 }
 
 // ==========================================
@@ -524,7 +522,7 @@ function renderStudentDirectory(list) {
         let coursesHTML = "";
         if (student.courses && Array.isArray(student.courses) && student.courses.length > 0) {
             coursesHTML = student.courses.map((c, index) => `
-                <li style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
+                <li style="display:flex; justify-space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
                     <div>
                         <strong style="color: #2d3748;">${escapeHTML(c.name)}</strong> 
                         <span style="color:#718096; margin-left:8px; font-size:0.80rem;">(${c.addedAt})</span>
@@ -897,8 +895,8 @@ function showView(id) {
     document.getElementById(id)?.classList.remove('hidden');
 }
 
-function openAccountModal() { document.getElementById('account-modal')?.classList.remove('hidden'); }
-function closeAccountModal() { document.getElementById('account-modal')?.classList.add('hidden'); }
+function openAccountModal() { document.getElementById('account-modal').classList.remove('hidden'); }
+function closeAccountModal() { document.getElementById('account-modal').classList.add('hidden'); }
 
 function toggleChatWindow() { 
     const chatWin = document.getElementById('chat-window');
@@ -926,166 +924,6 @@ function runLiveFooterClock() {
         }, 1000);
     }
 }
-
-//
-// Tab switching logic
-function switchLoginTab(role) {
-    document.getElementById('selected-role').value = role;
-    
-    const tabs = ['operator', 'manager', 'employee'];
-    tabs.forEach(t => {
-        const btn = document.getElementById(`tab-${t}`);
-        if (t === role) {
-            btn.style.background = '#2b6cb0';
-            btn.style.color = '#ffffff';
-            btn.style.border = 'none';
-        } else {
-            btn.style.background = '#f8fafc';
-            btn.style.color = '#475569';
-            btn.style.border = '1px solid #cbd5e1';
-        }
-    });
-
-    const emailForm = document.getElementById('form-email-auth');
-    const googleSection = document.getElementById('section-google-auth');
-    const submitBtn = document.getElementById('btn-email-submit');
-
-    if (role === 'employee') {
-        emailForm.style.display = 'none';
-        googleSection.style.display = 'block';
-    } else {
-        emailForm.style.display = 'block';
-        googleSection.style.display = 'none';
-        submitBtn.textContent = role === 'manager' ? 'Sign in as Manager' : 'Sign in as Operator';
-    }
-}
-
-// Handle Email/Password Login with Active Session Lock
-async function handleEmailAuth(event) {
-    event.preventDefault();
-    const email = document.getElementById('auth-email').value;
-    const password = document.getElementById('auth-password').value;
-    const role = document.getElementById('selected-role').value; // 'operator' or 'manager'
-
-    try {
-        // Step 1: Attempt Firebase Auth
-        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-
-        // Step 2: Check active role lock in Firestore
-        const isLockAcquired = await acquireRoleSessionLock(user, role);
-
-        if (!isLockAcquired) {
-            // Reject sign-in if another person is active in this role
-            await firebase.auth().signOut();
-            alert(`Sign-in rejected: A ${role} is already signed in. Only one active ${role} session is allowed.`);
-            return;
-        }
-
-        // Setup disconnect trigger on window close / tab exit
-        setupSessionCleanupOnExit(user.uid, role);
-
-        showView('view-home');
-    } catch (error) {
-        alert('Authentication failed: ' + error.message);
-    }
-}
-
-// Handle Google Login for Employees
-async function signInWithGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-        const result = await firebase.auth().signInWithPopup(provider);
-        const user = result.user;
-        
-        const isLockAcquired = await acquireRoleSessionLock(user, 'employee');
-        if (!isLockAcquired) {
-            await firebase.auth().signOut();
-            alert('Sign-in rejected: An employee session is already active.');
-            return;
-        }
-
-        setupSessionCleanupOnExit(user.uid, 'employee');
-        showView('view-home');
-    } catch (error) {
-        alert('Google Sign-in failed: ' + error.message);
-    }
-}
-
-// Acquire single-user lock per role using Firestore Document
-async function acquireRoleSessionLock(user, role) {
-    const lockRef = firebase.firestore().collection('active_sessions').doc(role);
-    const db = firebase.firestore();
-
-    try {
-        return await db.runTransaction(async (transaction) => {
-            const lockDoc = await transaction.get(lockRef);
-
-            if (lockDoc.exists) {
-                const data = lockDoc.data();
-                const now = Date.now();
-                // 5-minute timeout window in case a user closed their browser without logging out
-                const sessionExpired = data.lastActive && (now - data.lastActive > 5 * 60 * 1000);
-
-                if (data.isActive && data.uid !== user.uid && !sessionExpired) {
-                    return false; // Lock rejected - someone else is active
-                }
-            }
-
-            // Grant lock to current user
-            transaction.set(lockRef, {
-                uid: user.uid,
-                email: user.email,
-                role: role,
-                isActive: true,
-                lastActive: Date.now()
-            });
-
-            return true;
-        });
-    } catch (err) {
-        console.error('Session lock error:', err);
-        return false;
-    }
-}
-
-// Release session lock on user logout
-async function logoutUser() {
-    const user = firebase.auth().currentUser;
-    const role = document.getElementById('selected-role').value;
-
-    if (user && role) {
-        try {
-            await firebase.firestore().collection('active_sessions').doc(role).update({
-                isActive: false,
-                lastActive: null
-            });
-        } catch (e) {
-            console.error('Error releasing session lock:', e);
-        }
-    }
-
-    await firebase.auth().signOut();
-    showView('view-auth');
-}
-
-// Automatic session keep-alive & cleanup on window close
-function setupSessionCleanupOnExit(uid, role) {
-    const lockRef = firebase.firestore().collection('active_sessions').doc(role);
-
-    // Heartbeat to keep session alive while active
-    setInterval(() => {
-        if (firebase.auth().currentUser) {
-            lockRef.update({ lastActive: Date.now() });
-        }
-    }, 60000); // Heartbeat every 1 minute
-
-    // Release lock on tab/window close
-    window.addEventListener('beforeunload', () => {
-        lockRef.update({ isActive: false });
-    });
-}
-//
 
 window.addEventListener('DOMContentLoaded', () => {
     runLiveFooterClock();
