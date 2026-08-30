@@ -18,8 +18,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // Designated single-account email addresses
-const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";   // Replace with actual Manager email
-const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com"; // Replace with actual Operator email
+const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";   // Replace with actual Manager email[cite: 3]
+const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com"; // Replace with actual Operator email[cite: 3]
 
 let currentUserData = null;
 let currentRole = null;
@@ -210,20 +210,24 @@ async function signInRoleWithGoogle(role) {
         // 1. Check Manager email authorization
         if (role === 'manager' && userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
             await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
+            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);[cite: 3]
             return;
         }
 
         // 2. Check Operator email authorization
         if (role === 'operator' && userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
             await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
+            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);[cite: 3]
             return;
         }
 
         const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
         sessionStorage.setItem("userRole", formattedRole);
         currentRole = formattedRole;
+
+        if (role === 'operator') {
+            window.location.href = "operator.html";
+        }
 
     } catch (error) {
         console.error(`${role} Google Login Error:`, error);
@@ -232,12 +236,30 @@ async function signInRoleWithGoogle(role) {
 }
 
 /**
- * Standard Google Sign-In for Employees (Allows multiple concurrent users).
+ * Standard Google Sign-In for Employees (Blocks restricted Manager/Operator emails).
  */
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
-        await auth.signInWithPopup(provider);
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const userEmail = (user.email || "").toLowerCase();
+
+        // Prevent Operator or Manager emails from logging in as Employees
+        if (userEmail === ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            sessionStorage.removeItem("userRole");
+            alert("This email is registered as an Operator. Please select the Operator role to sign in.");
+            return;
+        }
+
+        if (userEmail === ALLOWED_MANAGER_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            sessionStorage.removeItem("userRole");
+            alert("This email is registered as a Manager. Please select the Manager role to sign in.");
+            return;
+        }
+
         sessionStorage.setItem("userRole", "Employee");
         currentRole = "Employee";
     } catch (error) {
@@ -288,6 +310,66 @@ async function logoutUser() {
     
     sessionStorage.removeItem("userRole");
     auth.signOut();
+    window.location.href = "index.html";
+}
+
+/**
+ * Deletes the currently logged-in user's account and associated data.
+ */
+async function deleteAccount() {
+    const user = auth.currentUser;
+    if (!user) {
+        alert("No active user session found.");
+        return;
+    }
+
+    const warningMessage = "WARNING: Are you sure you want to delete your account?\n\n" +
+        "This action is permanent and CANNOT be undone. " +
+        "All of your account data, registered records, and personal settings will be permanently deleted.";
+
+    if (!confirm(warningMessage)) {
+        return;
+    }
+
+    const confirmName = prompt(`Type "DELETE" to permanently remove your account (${user.email}):`);
+    if (confirmName !== "DELETE") {
+        alert("Account deletion cancelled.");
+        return;
+    }
+
+    try {
+        const userUid = user.uid;
+
+        // 1. Clear user profile document from Firestore
+        await db.collection("users").doc(userUid).delete().catch(() => {});
+
+        // 2. Clear role lock if Operator or Manager
+        const role = (sessionStorage.getItem("userRole") || "").toLowerCase();
+        if (role === "operator" || role === "manager") {
+            const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+            await sessionLockDoc.set({ [lockKey]: null }, { merge: true }).catch(() => {});
+        }
+
+        // 3. Clear local session data
+        sessionStorage.clear();
+
+        // 4. Delete authentication account
+        await user.delete();
+
+        alert("Your account and all associated data have been permanently deleted.");
+        window.location.href = "index.html";
+
+    } catch (error) {
+        console.error("Error deleting account:", error);
+
+        if (error.code === 'auth/requires-recent-login') {
+            alert("Security Notice: Deleting your account requires a fresh login. Please log out, sign in again, and retry deleting your account.");
+            await auth.signOut();
+            window.location.href = "index.html";
+        } else {
+            alert("Failed to delete account: " + error.message);
+        }
+    }
 }
 
 // ==========================================
