@@ -18,8 +18,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // Designated single-account email addresses
-const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";   // Replace with actual Manager email[cite: 3]
-const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com"; // Replace with actual Operator email[cite: 3]
+const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";  
+const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com";
 
 let currentUserData = null;
 let currentRole = null;
@@ -143,12 +143,12 @@ function applyLanguageTranslations() {
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (langObj[key]) el.innerText = langObj[key];
+        if (langObj && langObj[key]) el.innerText = langObj[key];
     });
 
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
-        if (langObj[key]) el.placeholder = langObj[key];
+        if (langObj && langObj[key]) el.placeholder = langObj[key];
     });
 }
 
@@ -210,14 +210,14 @@ async function signInRoleWithGoogle(role) {
         // 1. Check Manager email authorization
         if (role === 'manager' && userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
             await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);[cite: 3]
+            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
             return;
         }
 
         // 2. Check Operator email authorization
         if (role === 'operator' && userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
             await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);[cite: 3]
+            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
             return;
         }
 
@@ -309,7 +309,7 @@ async function logoutUser() {
     }
     
     sessionStorage.removeItem("userRole");
-    auth.signOut();
+    await auth.signOut();
     window.location.href = "index.html";
 }
 
@@ -675,7 +675,7 @@ function renderStudentDirectory(list) {
 
         item.innerHTML = `
             <div class="student-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                <span>${escapeHTML(student.name)} (${escapeHTML(student.cpr)})</span>
+                <span>${escapeHTML(student.name || 'Unnamed Student')} (${escapeHTML(student.cpr)})</span>
                 <svg class="arrow-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
             <div class="student-details hidden">
@@ -987,25 +987,10 @@ function toggleEmojiPicker() {
 
 function escapeHTML(str) {
     if (!str) return "";
-    return str.replace(/[&<>'"]/g, 
+    return String(str).replace(/[&<>'"]/g, 
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
     );
 }
-
-window.addEventListener('DOMContentLoaded', () => {
-    const emojiPicker = document.getElementById('emoji-picker');
-    const chatInput = document.getElementById('chat-input');
-
-    if (emojiPicker && chatInput) {
-        emojiPicker.querySelectorAll('span').forEach(emoji => {
-            emoji.addEventListener('click', () => {
-                chatInput.value += emoji.innerText;
-                chatInput.focus();
-                emojiPicker.classList.add('hidden');
-            });
-        });
-    }
-});
 
 // ==========================================
 // 9. NAVIGATION, MODALS & LIVE CLOCK
@@ -1015,8 +1000,8 @@ function showView(id) {
     document.getElementById(id)?.classList.remove('hidden');
 }
 
-function openAccountModal() { document.getElementById('account-modal').classList.remove('hidden'); }
-function closeAccountModal() { document.getElementById('account-modal').classList.add('hidden'); }
+function openAccountModal() { document.getElementById('account-modal')?.classList.remove('hidden'); }
+function closeAccountModal() { document.getElementById('account-modal')?.classList.add('hidden'); }
 
 function toggleChatWindow() { 
     const chatWin = document.getElementById('chat-window');
@@ -1045,7 +1030,66 @@ function runLiveFooterClock() {
     }
 }
 
+// Attach functions explicitly to global window scope so HTML buttons can invoke them directly
+window.selectRole = selectRole;
+window.signInRoleWithGoogle = signInRoleWithGoogle;
+window.signInWithGoogle = signInWithGoogle;
+window.logoutUser = logoutUser;
+window.deleteAccount = deleteAccount;
+window.addStudentCPR = addStudentCPR;
+window.resetAndAddAnotherCPR = resetAndAddAnotherCPR;
+window.handleSearch = handleSearch;
+window.downloadAllStudentsData = downloadAllStudentsData;
+window.downloadSingleStudentData = downloadSingleStudentData;
+window.updateStudentField = updateStudentField;
+window.deleteStudent = deleteStudent;
+window.addCourseToStudent = addCourseToStudent;
+window.removeCourse = removeCourse;
+window.uploadStudentCV = uploadStudentCV;
+window.deleteStudentCV = deleteStudentCV;
+window.sendChatMessage = sendChatMessage;
+window.toggleEmojiPicker = toggleEmojiPicker;
+window.toggleChatWindow = toggleChatWindow;
+window.openAccountModal = openAccountModal;
+window.closeAccountModal = closeAccountModal;
+window.toggleLanguage = toggleLanguage;
+window.showView = showView;
+
 window.addEventListener('DOMContentLoaded', () => {
     runLiveFooterClock();
     applyLanguageTranslations();
+
+    // Emoji click setup
+    const emojiPicker = document.getElementById('emoji-picker');
+    const chatInput = document.getElementById('chat-input');
+    if (emojiPicker && chatInput) {
+        emojiPicker.querySelectorAll('span').forEach(emoji => {
+            emoji.addEventListener('click', () => {
+                chatInput.value += emoji.innerText;
+                chatInput.focus();
+                emojiPicker.classList.add('hidden');
+            });
+        });
+    }
+
+    // Keydown Listener: Enter to Send Chat Message
+    if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+    }
+
+    // Keydown Listener: Enter to Submit CPR
+    const cprInput = document.getElementById('cpr-input');
+    if (cprInput) {
+        cprInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addStudentCPR();
+            }
+        });
+    }
 });
