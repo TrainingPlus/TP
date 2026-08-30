@@ -192,45 +192,50 @@ function selectRole(role) {
     document.getElementById(`form-${role}`)?.classList.remove('hidden');
 }
 
-// Google Sign-In with Permanent Lock Enforcement for Manager and Operator
+/**
+ * Enforces Single-Session Google Sign-In for restricted roles ('manager' | 'operator')[cite: 4].
+ * Rejects authentication if another Google account already holds an active session lock[cite: 4].
+ */
 async function signInRoleWithGoogle(role) {
     const provider = new firebase.auth.GoogleAuthProvider();
 
     try {
         const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
-        
-        // 1. Authenticate user with Google
+
+        // 1. Authenticate user via Google Popup first to obtain their UID
         const result = await auth.signInWithPopup(provider);
         const user = result.user;
 
-        // 2. Fetch current permanent session lock from Firestore
+        // 2. Query the single-session lock status in Firestore[cite: 4]
         const docSnap = await sessionLockDoc.get();
 
         if (docSnap.exists) {
-            const registeredUid = docSnap.data()[lockKey];
-            
-            // If role is permanently registered to a different account UID, block access
-            if (registeredUid && registeredUid !== user.uid) {
+            const activeUid = docSnap.data()[lockKey];
+
+            // If a different Google UID is actively locked in, reject sign-in and sign out[cite: 4]
+            if (activeUid && activeUid !== user.uid) {
                 await auth.signOut();
-                alert(`Sign-in rejected: A permanent ${role} account is already registered. Only that account can log in unless deleted.`);
+                alert(`Sign-in rejected: A ${role} is already signed in. Only one active ${role} session is allowed.`);
                 return;
             }
         }
 
-        // 3. Bind and register permanent lock to this user UID
+        // 3. Lock or maintain session ownership for this role[cite: 4]
         await sessionLockDoc.set({ [lockKey]: user.uid }, { merge: true });
-        
+
         const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
         sessionStorage.setItem("userRole", formattedRole);
         currentRole = formattedRole;
 
     } catch (error) {
-        console.error(`${role} Google Sign-In Error:`, error);
+        console.error(`${role} Google Login Error:`, error);
         alert(`Sign-In Failed: ${error.message}`);
     }
 }
 
-// Employee Google Sign-In (Allows multiple concurrent users)
+/**
+ * Standard Google Sign-In for Employees (Allows multiple concurrent users)[cite: 4].
+ */
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
@@ -270,43 +275,21 @@ function updateUserUI(isLoggedIn) {
     }
 }
 
-// Standard Logout (Keeps permanent role lock intact in Firestore)
 async function logoutUser() {
+    const normalizedRole = (currentRole || "").toLowerCase();
+    
+    // Release single-session lock when logging out of Manager or Operator roles[cite: 4]
+    if (normalizedRole === "manager" || normalizedRole === "operator") {
+        const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
+        try {
+            await sessionLockDoc.set({ [lockKey]: null }, { merge: true });
+        } catch (e) {
+            console.error("Error clearing session lock:", e);
+        }
+    }
+    
     sessionStorage.removeItem("userRole");
-    await auth.signOut();
-}
-
-// Permanent Account & Lock Deletion Method
-async function deleteRoleAccount() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const role = (currentRole || "").toLowerCase();
-    if (role !== "manager" && role !== "operator") {
-        alert("Only Manager or Operator accounts can release role locks via deletion.");
-        return;
-    }
-
-    const confirmDelete = confirm(`Are you sure you want to delete your ${currentRole} account? This will permanently release the role for a new user.`);
-    if (!confirmDelete) return;
-
-    try {
-        const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
-
-        // 1. Delete lock key from Firestore system status
-        await sessionLockDoc.update({
-            [lockKey]: firebase.firestore.FieldValue.delete()
-        });
-
-        // 2. Delete user authentication account
-        await user.delete();
-
-        alert(`Account deleted. The ${currentRole} role is now open for a new user.`);
-        logoutUser();
-    } catch (error) {
-        console.error("Account Deletion Error:", error);
-        alert(`Failed to delete account: ${error.message}`);
-    }
+    auth.signOut();
 }
 
 // ==========================================
@@ -579,7 +562,7 @@ function renderStudentDirectory(list) {
         let coursesHTML = "";
         if (student.courses && Array.isArray(student.courses) && student.courses.length > 0) {
             coursesHTML = student.courses.map((c, index) => `
-                <li style="display:flex; justify-space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
+                <li style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
                     <div>
                         <strong style="color: #2d3748;">${escapeHTML(c.name)}</strong> 
                         <span style="color:#718096; margin-left:8px; font-size:0.80rem;">(${c.addedAt})</span>
