@@ -32,35 +32,30 @@
     </header>
 
     <main>
-
         <!-- Auth View (Role Selector & Dynamic Sign In) -->
-        <section id="view-auth" class="card-view" style="max-width: 440px; margin: 40px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-            <h2 style="color: #2b6cb0; margin-bottom: 8px;" data-i18n="welcome_title">Welcome</h2>
-            <p style="color: #718096; margin-bottom: 24px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Select your role to sign in to the Student Directory</p>
+        <section id="view-auth" class="card-view auth-card">
+            <h2 class="auth-title" data-i18n="welcome_title">Welcome</h2>
+            <p class="auth-subtitle" data-i18n="welcome_subtitle">Select your role to sign in to the Student Directory</p>
 
             <!-- Role Selection Options -->
-            <div style="display: flex; gap: 8px; margin-bottom: 24px; justify-content: center;">
-                <button type="button" id="role-btn-manager" onclick="selectRole('manager')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Manager</button>
-                <button type="button" id="role-btn-operator" onclick="selectRole('operator')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Operator</button>
-                <button type="button" id="role-btn-employee" onclick="selectRole('employee')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Employee</button>
+            <div class="role-selector-container">
+                <button type="button" id="role-btn-manager" class="role-btn" onclick="selectRole('manager')">Manager</button>
+                <button type="button" id="role-btn-operator" class="role-btn" onclick="selectRole('operator')">Operator</button>
+                <button type="button" id="role-btn-employee" class="role-btn" onclick="selectRole('employee')">Employee</button>
             </div>
 
             <!-- Dynamic Form Area -->
-            <div id="auth-form-container" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #f8fafc;">
+            <div id="auth-form-container" class="auth-form-box">
                 
                 <!-- Prompt when no role is clicked yet -->
-                <div id="role-prompt" style="color: #64748b; font-size: 0.9rem; padding: 10px 0;">
+                <div id="role-prompt" class="role-prompt-text">
                     Please select a role above to continue.
                 </div>
 
                 <!-- Manager Google Sign In -->
-                <div id="form-manager" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Manager Sign In</h3>
-                    <button type="button" id="btn-google-auth-manager" onclick="signInRoleWithGoogle('manager')" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
+                <div id="form-manager" class="role-form-panel hidden">
+                    <h3 class="form-title">Manager Sign In</h3>
+                    <button type="button" id="btn-google-auth-manager" class="google-auth-btn" onclick="signInRoleWithGoogle('manager')">
                         <svg width="18" height="18" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -72,13 +67,9 @@
                 </div>
 
                 <!-- Operator Google Sign In -->
-                <div id="form-operator" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Operator Sign In</h3>
-                    <button type="button" id="btn-google-auth-operator" onclick="signInRoleWithGoogle('operator')" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
+                <div id="form-operator" class="role-form-panel hidden">
+                    <h3 class="form-title">Operator Sign In</h3>
+                    <button type="button" id="btn-google-auth-operator" class="google-auth-btn" onclick="signInRoleWithGoogle('operator')">
                         <svg width="18" height="18" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -90,13 +81,9 @@
                 </div>
 
                 <!-- Employee Google Sign In -->
-                <div id="form-employee" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Employee Sign In</h3>
-                    <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
+                <div id="form-employee" class="role-form-panel hidden">
+                    <h3 class="form-title">Employee Sign In</h3>
+                    <button type="button" id="btn-google-auth" class="google-auth-btn" onclick="signInWithGoogle()">
                         <svg width="18" height="18" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -153,11 +140,11 @@
     <div id="account-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-btn" onclick="closeAccountModal()">&times;</span>
-            <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
+            <h3 class="modal-title" data-i18n="modal_account_title">User Account</h3>
             <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
             <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
             <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
-            <p style="margin-bottom: 16px;"><strong>Role:</strong> <span id="modal-role">--</span></p>
+            <p class="role-display-row"><strong>Role:</strong> <span id="modal-role">--</span></p>
         </div>
     </div>
 
@@ -167,20 +154,32 @@
             💬
             <span id="chat-unread-badge" class="hidden">0</span>
         </button>
-    
+        
         <div id="chat-window" class="chat-box hidden">
             <div class="chat-header">
                 <span data-i18n="chat_header">Team Group Chat</span>
-                <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
+                <span class="close-chat" onclick="toggleChatWindow()">&times;</span>
             </div>
             
             <div id="chat-messages" class="chat-messages"></div>
 
             <!-- Emoji Picker Popup Container -->
             <div id="emoji-picker" class="emoji-picker-container hidden">
-                <span>😀</span><span>😂</span><span>😍</span><span>👍</span><span>❤️</span>
-                <span>🔥</span><span>🎉</span><span>👏</span><span>🙏</span><span>✨</span>
-                <span>😊</span><span>😎</span><span>🙌</span><span>💯</span><span>🚀</span>
+                <span onclick="insertEmoji('😀')">😀</span>
+                <span onclick="insertEmoji('😂')">😂</span>
+                <span onclick="insertEmoji('😍')">😍</span>
+                <span onclick="insertEmoji('👍')">👍</span>
+                <span onclick="insertEmoji('❤️')">❤️</span>
+                <span onclick="insertEmoji('🔥')">🔥</span>
+                <span onclick="insertEmoji('🎉')">🎉</span>
+                <span onclick="insertEmoji('👏')">👏</span>
+                <span onclick="insertEmoji('🙏')">🙏</span>
+                <span onclick="insertEmoji('✨')">✨</span>
+                <span onclick="insertEmoji('😊')">😊</span>
+                <span onclick="insertEmoji('😎')">😎</span>
+                <span onclick="insertEmoji('🙌')">🙌</span>
+                <span onclick="insertEmoji('💯')">💯</span>
+                <span onclick="insertEmoji('🚀')">🚀</span>
             </div>
 
             <!-- Chat Input Row -->
