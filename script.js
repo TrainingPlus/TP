@@ -19,6 +19,7 @@ const db = firebase.firestore();
 
 let currentUserData = null;
 let currentRole = null;
+let selectedRoleChoice = null;
 let studentList = [];
 let currentLang = 'en';
 const pageLoadedAt = new Date();
@@ -36,7 +37,7 @@ const translations = {
         account: "Account",
         logout: "Logout",
         welcome_title: "Welcome",
-        welcome_subtitle: "Sign in to access the Training Plus Student Directory",
+        welcome_subtitle: "Select your role to sign in to the Student Directory",
         btn_google: "Sign in with Google",
         student_directory: "Student Directory",
         add_new_cpr: "+ Add New CPR",
@@ -83,7 +84,7 @@ const translations = {
         account: "الحساب",
         logout: "تسجيل الخروج",
         welcome_title: "مرحباً بك",
-        welcome_subtitle: "سجل الدخول للوصول إلى دليل طلاب ترينينج بلس",
+        welcome_subtitle: "اختر دورك لتسجيل الدخول إلى دليل الطلاب",
         btn_google: "تسجيل الدخول باستخدام جوجل",
         student_directory: "دليل الطلاب",
         add_new_cpr: "+ إضافة رقم شخصي جديد",
@@ -163,8 +164,37 @@ auth.onAuthStateChanged((user) => {
 });
 
 // ==========================================
-// 3. USER UI & 3-WAY AUTHENTICATION
+// 3. ROLE SELECTION & AUTHENTICATION
 // ==========================================
+
+// Handle visual selection of role button
+function selectRole(role) {
+    selectedRoleChoice = role;
+
+    // Reset button styles
+    ['manager', 'operator', 'employee'].forEach(r => {
+        const btn = document.getElementById(`role-btn-${r}`);
+        const form = document.getElementById(`form-${r}`);
+        if (btn) {
+            btn.style.background = '#f8fafc';
+            btn.style.color = '#334155';
+            btn.style.borderColor = '#cbd5e1';
+        }
+        if (form) form.classList.add('hidden');
+    });
+
+    // Highlight selected button
+    const activeBtn = document.getElementById(`role-btn-${role}`);
+    if (activeBtn) {
+        activeBtn.style.background = '#2b6cb0';
+        activeBtn.style.color = '#ffffff';
+        activeBtn.style.borderColor = '#2b6cb0';
+    }
+
+    // Show prompt off, show selected form
+    document.getElementById('role-prompt')?.classList.add('hidden');
+    document.getElementById(`form-${role}`)?.classList.remove('hidden');
+}
 
 // Manager and Operator Single-Session Sign In
 async function signInRole(event, role) {
@@ -190,8 +220,8 @@ async function signInRole(event, role) {
 
         // Lock session in Firestore
         await sessionLockDoc.set({ [lockKey]: uid }, { merge: true });
-        sessionStorage.setItem("userRole", role);
-        currentRole = role;
+        sessionStorage.setItem("userRole", role.charAt(0).toUpperCase() + role.slice(1));
+        currentRole = role.charAt(0).toUpperCase() + role.slice(1);
 
     } catch (error) {
         console.error(`${role} Login Error:`, error);
@@ -204,7 +234,7 @@ async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
         await auth.signInWithPopup(provider);
-        sessionStorage.setItem("userRole", "employee");
+        sessionStorage.setItem("userRole", "Employee");
         currentRole = "Employee";
     } catch (error) {
         console.error("Google Sign-In Error:", error);
@@ -240,8 +270,9 @@ function updateUserUI(isLoggedIn) {
 }
 
 async function logoutUser() {
-    if (currentRole === "manager" || currentRole === "operator") {
-        const lockKey = currentRole === 'manager' ? 'active_manager' : 'active_operator';
+    const normalizedRole = (currentRole || "").toLowerCase();
+    if (normalizedRole === "manager" || normalizedRole === "operator") {
+        const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
         try {
             await sessionLockDoc.set({ [lockKey]: null }, { merge: true });
         } catch (e) {
