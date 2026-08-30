@@ -26,7 +26,7 @@
             <button class="nav-btn" onclick="showCoursesView()">Courses</button>
             <span id="operator-email-display" style="align-self: center; font-size: 0.85rem; margin: 0 8px;">Loading operator...</span>
             <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
-            <button id="logoutBtn" onclick="logoutUser()" class="nav-btn logout-btn">Logout</button>
+            <button id="logoutBtn" onclick="handleLogout()" class="nav-btn logout-btn">Logout</button>
         </div>
     </header>
 
@@ -100,7 +100,9 @@
         <span id="footer-datetime">Loading date & time...</span>
     </footer>
 
+    <!-- External Script containing Firebase Configuration -->
     <script src="script.js"></script>
+
     <script>
         // App State Tracker
         let currentCourseId = null;
@@ -109,7 +111,7 @@
         let currentClassName = "";
         let currentStudentsData = [];
 
-        // Helper: Escape HTML
+        // Helper: Escape HTML string output
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -124,44 +126,59 @@
         function updateDateTime() {
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-            document.getElementById('footer-datetime').innerText = now.toLocaleDateString('en-US', options);
+            const footerEl = document.getElementById('footer-datetime');
+            if (footerEl) footerEl.innerText = now.toLocaleDateString('en-US', options);
         }
         setInterval(updateDateTime, 1000);
         updateDateTime();
 
-        // Language Toggle
+        // Language Toggle (LTR / RTL)
         function toggleLanguage() {
             const isRTL = document.body.getAttribute('dir') === 'rtl';
+            const langBtn = document.getElementById('lang-btn');
             if (isRTL) {
                 document.body.removeAttribute('dir');
-                document.getElementById('lang-btn').innerText = 'EN / AR';
+                if (langBtn) langBtn.innerText = 'EN / AR';
             } else {
                 document.body.setAttribute('dir', 'rtl');
-                document.getElementById('lang-btn').innerText = 'AR / EN';
+                if (langBtn) langBtn.innerText = 'AR / EN';
             }
         }
 
-        // Authentication & Role Control
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                const userEmail = (user.email || "").toLowerCase();
-                const targetEmail = (typeof ALLOWED_OPERATOR_EMAIL !== "undefined" ? ALLOWED_OPERATOR_EMAIL : "").toLowerCase();
-                
-                if (targetEmail && userEmail !== targetEmail) {
-                    alert("Access Denied: Operator authorization required.");
-                    auth.signOut();
+        // Logout handling with fallback
+        function handleLogout() {
+            if (typeof logoutUser === 'function') {
+                logoutUser();
+            } else if (typeof auth !== 'undefined') {
+                auth.signOut().then(() => {
                     window.location.href = "index.html";
-                    return;
-                }
-                
-                document.getElementById('operator-email-display').innerText = `Account: ${user.email}`;
-                showCoursesView();
-            } else {
-                window.location.href = "index.html";
+                });
             }
-        });
+        }
 
-        // VIEW NAVIGATION (Uses .hidden class from style.css)
+        // Auth State Listener
+        if (typeof auth !== 'undefined') {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    const userEmail = (user.email || "").toLowerCase();
+                    const targetEmail = (typeof ALLOWED_OPERATOR_EMAIL !== "undefined" ? ALLOWED_OPERATOR_EMAIL : "").toLowerCase();
+                    
+                    if (targetEmail && userEmail !== targetEmail) {
+                        alert("Access Denied: Operator authorization required.");
+                        auth.signOut();
+                        window.location.href = "index.html";
+                        return;
+                    }
+                    
+                    document.getElementById('operator-email-display').innerText = `Account: ${user.email}`;
+                    showCoursesView();
+                } else {
+                    window.location.href = "index.html";
+                }
+            });
+        }
+
+        // Navigation Controllers
         function showCoursesView() {
             document.getElementById('view-courses').classList.remove('hidden');
             document.getElementById('view-classes').classList.add('hidden');
@@ -191,8 +208,9 @@
             loadStudentsForClass(currentCourseId, classId);
         }
 
-        // FIRESTORE OPERATIONS: COURSES
+        // Firestore: Course Management
         function loadManagerCourses() {
+            if (typeof db === 'undefined') return;
             db.collection("courses").onSnapshot((snapshot) => {
                 const container = document.getElementById("courses-list-container");
                 container.innerHTML = "";
@@ -209,15 +227,19 @@
 
                     const item = document.createElement("div");
                     item.className = "student-item";
-                    item.innerHTML = `
-                        <div class="student-header" onclick="showClassesView('${courseId}', '${escapeHTML(cName).replace(/'/g, "\\'")}')">
-                            <div>
-                                <h3 style="font-size: 1rem; color: var(--text-primary);">📚 ${escapeHTML(cName)}</h3>
-                                <small style="color: var(--text-muted); font-weight: normal;">Click to open course classes</small>
-                            </div>
-                            <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Manage Classes →</button>
+
+                    const headerDiv = document.createElement("div");
+                    headerDiv.className = "student-header";
+                    headerDiv.onclick = () => showClassesView(courseId, cName);
+
+                    headerDiv.innerHTML = `
+                        <div>
+                            <h3 style="font-size: 1rem; color: var(--text-primary);">📚 ${escapeHTML(cName)}</h3>
+                            <small style="color: var(--text-muted); font-weight: normal;">Click to open course classes</small>
                         </div>
+                        <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Manage Classes →</button>
                     `;
+                    item.appendChild(headerDiv);
                     container.appendChild(item);
                 });
             });
@@ -237,8 +259,9 @@
             }
         }
 
-        // FIRESTORE OPERATIONS: CLASSES
+        // Firestore: Class Management
         function loadClassesForCourse(courseId) {
+            if (typeof db === 'undefined') return;
             db.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
                 const container = document.getElementById("classes-list-container");
                 container.innerHTML = "";
@@ -255,15 +278,19 @@
 
                     const item = document.createElement("div");
                     item.className = "student-item";
-                    item.innerHTML = `
-                        <div class="student-header" onclick="showClassDetailsView('${classId}', '${escapeHTML(className).replace(/'/g, "\\'")}')">
-                            <div>
-                                <h4 style="font-size: 0.95rem; color: var(--text-primary);">🏫 Class: ${escapeHTML(className)}</h4>
-                                <small style="color: var(--text-muted); font-weight: normal;">Click to view roster and manage students</small>
-                            </div>
-                            <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Open Roster →</button>
+
+                    const headerDiv = document.createElement("div");
+                    headerDiv.className = "student-header";
+                    headerDiv.onclick = () => showClassDetailsView(classId, className);
+
+                    headerDiv.innerHTML = `
+                        <div>
+                            <h4 style="font-size: 0.95rem; color: var(--text-primary);">🏫 Class: ${escapeHTML(className)}</h4>
+                            <small style="color: var(--text-muted); font-weight: normal;">Click to view roster and manage students</small>
                         </div>
+                        <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem;">Open Roster →</button>
                     `;
+                    item.appendChild(headerDiv);
                     container.appendChild(item);
                 });
             });
@@ -284,8 +311,9 @@
             }
         }
 
-        // FIRESTORE OPERATIONS: STUDENTS
+        // Firestore: Student Management
         function loadStudentsForClass(courseId, classId) {
+            if (typeof db === 'undefined') return;
             db.collection("courses").doc(courseId)
                 .collection("classes").doc(classId)
                 .collection("students").onSnapshot((snapshot) => {
@@ -315,24 +343,66 @@
 
                         const row = document.createElement("tr");
                         row.style.borderBottom = "1px solid var(--border-color)";
-                        row.innerHTML = `
-                            <td style="padding: 10px; font-size: 0.85rem;">${escapeHTML(sName)}</td>
-                            <td style="padding: 10px; font-size: 0.85rem;">${escapeHTML(cpr)}</td>
-                            <td style="padding: 10px; font-size: 0.85rem;">
-                                <select onchange="updateStudentField('${studentId}', 'tamkeenStatus', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;">
-                                    <option value="Accepted" ${status === 'Accepted' ? 'selected' : ''}>Accepted</option>
-                                    <option value="Under Process" ${status === 'Under Process' ? 'selected' : ''}>Under Process</option>
-                                    <option value="Withdrawn" ${status === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
-                                </select>
-                            </td>
-                            <td style="padding: 10px; font-size: 0.85rem;">
-                                <span>${escapeHTML(comment) || '<i style="color:var(--text-muted);">No comments</i>'}</span>
-                                <button class="secondary-btn" style="padding: 2px 6px; font-size: 0.75rem; margin-left: 6px;" onclick="addComment('${studentId}', '${escapeHTML(comment).replace(/'/g, "\\'")}')">💬 Edit</button>
-                            </td>
-                            <td style="padding: 10px; font-size: 0.85rem;">
-                                <button class="delete-icon-btn" onclick="deleteStudent('${studentId}')">🗑️ Delete</button>
-                            </td>
-                        `;
+                        
+                        // Student Name Cell
+                        const tdName = document.createElement("td");
+                        tdName.style.cssText = "padding: 10px; font-size: 0.85rem;";
+                        tdName.textContent = sName;
+                        row.appendChild(tdName);
+
+                        // CPR Cell
+                        const tdCpr = document.createElement("td");
+                        tdCpr.style.cssText = "padding: 10px; font-size: 0.85rem;";
+                        tdCpr.textContent = cpr;
+                        row.appendChild(tdCpr);
+
+                        // Tamkeen Status Cell
+                        const tdStatus = document.createElement("td");
+                        tdStatus.style.cssText = "padding: 10px; font-size: 0.85rem;";
+                        const selectStatus = document.createElement("select");
+                        selectStatus.style.cssText = "padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); outline: none;";
+                        selectStatus.onchange = (e) => updateStudentField(studentId, 'tamkeenStatus', e.target.value);
+                        
+                        ['Accepted', 'Under Process', 'Withdrawn'].forEach((optVal) => {
+                            const opt = document.createElement("option");
+                            opt.value = optVal;
+                            opt.textContent = optVal;
+                            if (status === optVal) opt.selected = true;
+                            selectStatus.appendChild(opt);
+                        });
+                        tdStatus.appendChild(selectStatus);
+                        row.appendChild(tdStatus);
+
+                        // Comment Cell
+                        const tdComment = document.createElement("td");
+                        tdComment.style.cssText = "padding: 10px; font-size: 0.85rem;";
+                        const commentSpan = document.createElement("span");
+                        if (comment) {
+                            commentSpan.textContent = comment;
+                        } else {
+                            commentSpan.innerHTML = '<i style="color:var(--text-muted);">No comments</i>';
+                        }
+                        
+                        const commentBtn = document.createElement("button");
+                        commentBtn.className = "secondary-btn";
+                        commentBtn.style.cssText = "padding: 2px 6px; font-size: 0.75rem; margin-left: 6px;";
+                        commentBtn.innerText = "💬 Edit";
+                        commentBtn.onclick = () => addComment(studentId, comment);
+
+                        tdComment.appendChild(commentSpan);
+                        tdComment.appendChild(commentBtn);
+                        row.appendChild(tdComment);
+
+                        // Delete Action Cell
+                        const tdAction = document.createElement("td");
+                        tdAction.style.cssText = "padding: 10px; font-size: 0.85rem;";
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.className = "delete-icon-btn";
+                        deleteBtn.innerText = "🗑️ Delete";
+                        deleteBtn.onclick = () => deleteStudent(studentId);
+                        tdAction.appendChild(deleteBtn);
+                        row.appendChild(tdAction);
+
                         tbody.appendChild(row);
                     });
                 });
@@ -376,7 +446,7 @@
         }
 
         async function addComment(studentId, existingComment) {
-            const newComment = prompt("Add/Update Comment:", existingComment);
+            const newComment = prompt("Add/Update Comment:", existingComment || "");
             if (newComment === null) return;
             updateStudentField(studentId, 'comment', newComment.trim());
         }
@@ -392,7 +462,7 @@
             }
         }
 
-        // EXCEL EXPORT FUNCTION
+        // Excel Export Functionality
         function exportClassToExcel() {
             if (!currentStudentsData || currentStudentsData.length === 0) {
                 alert("No student data available to download.");
