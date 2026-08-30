@@ -6,10 +6,11 @@
     <title>Operator Portal - Course & Class Management</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase Libraries -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -51,7 +52,9 @@
         auth.onAuthStateChanged((user) => {
             if (user) {
                 const userEmail = (user.email || "").toLowerCase();
-                if (userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+                const targetEmail = (typeof ALLOWED_OPERATOR_EMAIL !== "undefined" ? ALLOWED_OPERATOR_EMAIL : "").toLowerCase();
+                
+                if (targetEmail && userEmail !== targetEmail) {
                     alert("Access Denied: You are not authorized to view the Operator portal.");
                     auth.signOut();
                     window.location.href = "index.html";
@@ -95,6 +98,8 @@
 
                     loadClassesForCourse(courseId);
                 });
+            }, (error) => {
+                console.error("Error loading courses:", error);
             });
         }
 
@@ -150,6 +155,7 @@
         function loadClassesForCourse(courseId) {
             db.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
                 const classesContainer = document.getElementById(`classes-container-${courseId}`);
+                if (!classesContainer) return;
                 classesContainer.innerHTML = "";
 
                 if (snapshot.empty) {
@@ -160,15 +166,19 @@
                 snapshot.forEach((classDoc) => {
                     const classData = classDoc.data();
                     const classId = classDoc.id;
+                    const cName = classData.className || "Unnamed Class";
 
                     const classBox = document.createElement("div");
                     classBox.className = "class-box";
+                    
+                    const safeNameAttr = escapeHTML(cName).replace(/'/g, "\\'");
+
                     classBox.innerHTML = `
                         <div class="class-title-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <h4 style="margin: 0;">Class: ${escapeHTML(classData.className)}</h4>
-                                <button class="btn-sm btn-edit" onclick="editClassName('${courseId}', '${classId}', '${escapeHTML(classData.className)}')">✏️ Edit</button>
-                                <button class="btn-sm btn-delete" onclick="deleteClass('${courseId}', '${classId}', '${escapeHTML(classData.className)}')">🗑️ Delete</button>
+                                <h4 style="margin: 0;">Class: ${escapeHTML(cName)}</h4>
+                                <button class="btn-sm btn-edit" onclick="editClassName('${courseId}', '${classId}', '${safeNameAttr}')">✏️ Edit</button>
+                                <button class="btn-sm btn-delete" onclick="deleteClass('${courseId}', '${classId}', '${safeNameAttr}')">🗑️ Delete</button>
                             </div>
                             <button class="btn-secondary" onclick="addStudentToClass('${courseId}', '${classId}')">+ Add Student</button>
                         </div>
@@ -260,6 +270,7 @@
                 .collection("classes").doc(classId)
                 .collection("students").onSnapshot((snapshot) => {
                     const tbody = document.getElementById(`students-tbody-${courseId}-${classId}`);
+                    if (!tbody) return;
                     tbody.innerHTML = "";
 
                     if (snapshot.empty) {
@@ -271,10 +282,12 @@
                         const student = studentDoc.data();
                         const studentId = studentDoc.id;
                         const currentStatus = student.tamkeenStatus || "Under Process";
+                        const sName = student.studentName || "N/A";
+                        const safeStudentName = escapeHTML(sName).replace(/'/g, "\\'");
 
                         const row = document.createElement("tr");
                         row.innerHTML = `
-                            <td>${escapeHTML(student.studentName || "N/A")}</td>
+                            <td>${escapeHTML(sName)}</td>
                             <td>${escapeHTML(student.cpr || studentId)}</td>
                             <td>
                                 <select class="status-select status-${currentStatus.toLowerCase().replace(/\s+/g, '-')}" 
@@ -285,8 +298,8 @@
                                 </select>
                             </td>
                             <td>
-                                <button class="btn-sm btn-edit" onclick="editStudentName('${courseId}', '${classId}', '${studentId}', '${escapeHTML(student.studentName)}')">✏️ Edit</button>
-                                <button class="btn-sm btn-delete" onclick="deleteStudent('${courseId}', '${classId}', '${studentId}', '${escapeHTML(student.studentName)}')">🗑️ Delete</button>
+                                <button class="btn-sm btn-edit" onclick="editStudentName('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">✏️ Edit</button>
+                                <button class="btn-sm btn-delete" onclick="deleteStudent('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">🗑️ Delete</button>
                             </td>
                         `;
                         tbody.appendChild(row);
