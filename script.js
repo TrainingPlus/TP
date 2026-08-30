@@ -927,6 +927,166 @@ function runLiveFooterClock() {
     }
 }
 
+//
+// Tab switching logic
+function switchLoginTab(role) {
+    document.getElementById('selected-role').value = role;
+    
+    const tabs = ['operator', 'manager', 'employee'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === role) {
+            btn.style.background = '#2b6cb0';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+        } else {
+            btn.style.background = '#f8fafc';
+            btn.style.color = '#475569';
+            btn.style.border = '1px solid #cbd5e1';
+        }
+    });
+
+    const emailForm = document.getElementById('form-email-auth');
+    const googleSection = document.getElementById('section-google-auth');
+    const submitBtn = document.getElementById('btn-email-submit');
+
+    if (role === 'employee') {
+        emailForm.style.display = 'none';
+        googleSection.style.display = 'block';
+    } else {
+        emailForm.style.display = 'block';
+        googleSection.style.display = 'none';
+        submitBtn.textContent = role === 'manager' ? 'Sign in as Manager' : 'Sign in as Operator';
+    }
+}
+
+// Handle Email/Password Login with Active Session Lock
+async function handleEmailAuth(event) {
+    event.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const role = document.getElementById('selected-role').value; // 'operator' or 'manager'
+
+    try {
+        // Step 1: Attempt Firebase Auth
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // Step 2: Check active role lock in Firestore
+        const isLockAcquired = await acquireRoleSessionLock(user, role);
+
+        if (!isLockAcquired) {
+            // Reject sign-in if another person is active in this role
+            await firebase.auth().signOut();
+            alert(`Sign-in rejected: A ${role} is already signed in. Only one active ${role} session is allowed.`);
+            return;
+        }
+
+        // Setup disconnect trigger on window close / tab exit
+        setupSessionCleanupOnExit(user.uid, role);
+
+        showView('view-home');
+    } catch (error) {
+        alert('Authentication failed: ' + error.message);
+    }
+}
+
+// Handle Google Login for Employees
+async function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        const result = await firebase.auth().signInWithPopup(provider);
+        const user = result.user;
+        
+        const isLockAcquired = await acquireRoleSessionLock(user, 'employee');
+        if (!isLockAcquired) {
+            await firebase.auth().signOut();
+            alert('Sign-in rejected: An employee session is already active.');
+            return;
+        }
+
+        setupSessionCleanupOnExit(user.uid, 'employee');
+        showView('view-home');
+    } catch (error) {
+        alert('Google Sign-in failed: ' + error.message);
+    }
+}
+
+// Acquire single-user lock per role using Firestore Document
+async function acquireRoleSessionLock(user, role) {
+    const lockRef = firebase.firestore().collection('active_sessions').doc(role);
+    const db = firebase.firestore();
+
+    try {
+        return await db.runTransaction(async (transaction) => {
+            const lockDoc = await transaction.get(lockRef);
+
+            if (lockDoc.exists) {
+                const data = lockDoc.data();
+                const now = Date.now();
+                // 5-minute timeout window in case a user closed their browser without logging out
+                const sessionExpired = data.lastActive && (now - data.lastActive > 5 * 60 * 1000);
+
+                if (data.isActive && data.uid !== user.uid && !sessionExpired) {
+                    return false; // Lock rejected - someone else is active
+                }
+            }
+
+            // Grant lock to current user
+            transaction.set(lockRef, {
+                uid: user.uid,
+                email: user.email,
+                role: role,
+                isActive: true,
+                lastActive: Date.now()
+            });
+
+            return true;
+        });
+    } catch (err) {
+        console.error('Session lock error:', err);
+        return false;
+    }
+}
+
+// Release session lock on user logout
+async function logoutUser() {
+    const user = firebase.auth().currentUser;
+    const role = document.getElementById('selected-role').value;
+
+    if (user && role) {
+        try {
+            await firebase.firestore().collection('active_sessions').doc(role).update({
+                isActive: false,
+                lastActive: null
+            });
+        } catch (e) {
+            console.error('Error releasing session lock:', e);
+        }
+    }
+
+    await firebase.auth().signOut();
+    showView('view-auth');
+}
+
+// Automatic session keep-alive & cleanup on window close
+function setupSessionCleanupOnExit(uid, role) {
+    const lockRef = firebase.firestore().collection('active_sessions').doc(role);
+
+    // Heartbeat to keep session alive while active
+    setInterval(() => {
+        if (firebase.auth().currentUser) {
+            lockRef.update({ lastActive: Date.now() });
+        }
+    }, 60000); // Heartbeat every 1 minute
+
+    // Release lock on tab/window close
+    window.addEventListener('beforeunload', () => {
+        lockRef.update({ isActive: false });
+    });
+}
+//
+
 window.addEventListener('DOMContentLoaded', () => {
     runLiveFooterClock();
     applyLanguageTranslations();
