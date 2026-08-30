@@ -14,26 +14,28 @@
 </head>
 <body>
 
-    <header class="app-header">
-        <div class="header-container">
+    <header class="header">
+        <div class="header-content">
             <h1>Operator Portal</h1>
-            <div class="user-controls">
+            <div class="user-info">
                 <span id="operator-email-display">Loading operator session...</span>
-                <button id="logoutBtn" onclick="logoutUser()" class="btn-logout">Logout</button>
+                <button id="logoutBtn" onclick="logoutUser()" class="btn btn-secondary">Logout</button>
             </div>
         </div>
     </header>
 
-    <main class="container">
-        <section class="portal-section">
+    <div class="container">
+        <div class="card">
             <h2>Assigned Courses & Classes</h2>
-            <p class="subtitle">View manager-created courses, add/edit/delete classes, and manage student Tamkeen status.</p>
+            <p class="subtitle" style="margin-bottom: 20px; color: var(--text-muted, #666);">
+                View manager-created courses, add/edit/delete classes, and manage student Tamkeen status.
+            </p>
             
-            <div id="courses-list-container" class="courses-container">
+            <div id="courses-list-container">
                 <p class="loading-text">Loading courses from manager...</p>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
     <script src="script.js"></script>
     <script>
@@ -84,13 +86,14 @@
                     const courseId = doc.id;
 
                     const courseCard = document.createElement("div");
-                    courseCard.className = "course-card";
+                    courseCard.className = "card";
+                    courseCard.style.marginTop = "20px";
                     courseCard.innerHTML = `
-                        <div class="course-header">
-                            <h3>${escapeHTML(course.courseName || "Unnamed Course")}</h3>
-                            <button class="btn-primary" onclick="addClassToCourse('${courseId}')">+ Add Class</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">${escapeHTML(course.courseName || "Unnamed Course")}</h3>
+                            <button class="btn btn-primary" onclick="addClassToCourse('${courseId}')">+ Add Class</button>
                         </div>
-                        <div id="classes-container-${courseId}" class="classes-container">
+                        <div id="classes-container-${courseId}">
                             <p class="loading-text">Loading classes...</p>
                         </div>
                     `;
@@ -169,31 +172,34 @@
                     const cName = classData.className || "Unnamed Class";
 
                     const classBox = document.createElement("div");
-                    classBox.className = "class-box";
+                    classBox.style.background = "#f9f9f9";
+                    classBox.style.padding = "15px";
+                    classBox.style.borderRadius = "8px";
+                    classBox.style.marginBottom = "15px";
                     
                     const safeNameAttr = escapeHTML(cName).replace(/'/g, "\\'");
 
                     classBox.innerHTML = `
-                        <div class="class-title-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <h4 style="margin: 0;">Class: ${escapeHTML(cName)}</h4>
-                                <button class="btn-sm btn-edit" onclick="editClassName('${courseId}', '${classId}', '${safeNameAttr}')">✏️ Edit</button>
-                                <button class="btn-sm btn-delete" onclick="deleteClass('${courseId}', '${classId}', '${safeNameAttr}')">🗑️ Delete</button>
+                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editClassName('${courseId}', '${classId}', '${safeNameAttr}')">✏️ Edit</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteClass('${courseId}', '${classId}', '${safeNameAttr}')">🗑️ Delete</button>
                             </div>
-                            <button class="btn-secondary" onclick="addStudentToClass('${courseId}', '${classId}')">+ Add Student</button>
+                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;" onclick="addStudentToClass('${courseId}', '${classId}')">+ Add Student</button>
                         </div>
-                        <div class="table-responsive">
-                            <table class="student-table">
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
                                 <thead>
-                                    <tr>
-                                        <th>Student Name</th>
-                                        <th>Student CPR</th>
-                                        <th>Tamkeen Status</th>
-                                        <th>Actions</th>
+                                    <tr style="border-bottom: 2px solid #ddd; text-align: left;">
+                                        <th style="padding: 8px;">Student Name</th>
+                                        <th style="padding: 8px;">Student CPR</th>
+                                        <th style="padding: 8px;">Tamkeen Status</th>
+                                        <th style="padding: 8px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="students-tbody-${courseId}-${classId}">
-                                    <tr><td colspan="4" class="loading-text">Loading students...</td></tr>
+                                    <tr><td colspan="4" class="loading-text" style="padding: 8px;">Loading students...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -274,7 +280,7 @@
                     tbody.innerHTML = "";
 
                     if (snapshot.empty) {
-                        tbody.innerHTML = `<tr><td colspan="4" class="no-data">No students registered in this class.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="4" class="no-data" style="padding: 8px;">No students registered in this class.</td></tr>`;
                         return;
                     }
 
@@ -286,20 +292,21 @@
                         const safeStudentName = escapeHTML(sName).replace(/'/g, "\\'");
 
                         const row = document.createElement("tr");
+                        row.style.borderBottom = "1px solid #eee";
                         row.innerHTML = `
-                            <td>${escapeHTML(sName)}</td>
-                            <td>${escapeHTML(student.cpr || studentId)}</td>
-                            <td>
-                                <select class="status-select status-${currentStatus.toLowerCase().replace(/\s+/g, '-')}" 
+                            <td style="padding: 8px;">${escapeHTML(sName)}</td>
+                            <td style="padding: 8px;">${escapeHTML(student.cpr || studentId)}</td>
+                            <td style="padding: 8px;">
+                                <select style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;" 
                                         onchange="updateTamkeenStatus('${courseId}', '${classId}', '${studentId}', this.value)">
                                     <option value="Accepted" ${currentStatus === 'Accepted' ? 'selected' : ''}>Accepted</option>
                                     <option value="Under Process" ${currentStatus === 'Under Process' ? 'selected' : ''}>Under Process</option>
                                     <option value="Withdrawn" ${currentStatus === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
                                 </select>
                             </td>
-                            <td>
-                                <button class="btn-sm btn-edit" onclick="editStudentName('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">✏️ Edit</button>
-                                <button class="btn-sm btn-delete" onclick="deleteStudent('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">🗑️ Delete</button>
+                            <td style="padding: 8px;">
+                                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 12px;" onclick="editStudentName('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">✏️ Edit</button>
+                                <button class="btn btn-danger" style="padding: 2px 6px; font-size: 12px;" onclick="deleteStudent('${courseId}', '${classId}', '${studentId}', '${safeStudentName}')">🗑️ Delete</button>
                             </td>
                         `;
                         tbody.appendChild(row);
