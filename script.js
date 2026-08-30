@@ -1,5 +1,5 @@
 // ==========================================
-// 1. FIREBASE CONFIGURATION
+// 1. FIREBASE CONFIGURATION & AUTHORIZATION
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyCzTs_zw28wkHij4Jj9-EEW3XOpQ5si2yc",
@@ -16,6 +16,10 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Designated single-account email addresses
+const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";   // Replace with actual Manager email
+const ALLOWED_OPERATOR_EMAIL = "operator@gmail.com"; // Replace with actual Operator email
 
 let currentUserData = null;
 let currentRole = null;
@@ -193,35 +197,29 @@ function selectRole(role) {
 }
 
 /**
- * Enforces Single-Session Google Sign-In for restricted roles ('manager' | 'operator')[cite: 4].
- * Rejects authentication if another Google account already holds an active session lock[cite: 4].
+ * Enforces Single-Person Google Sign-In for restricted roles ('manager' | 'operator').
  */
 async function signInRoleWithGoogle(role) {
     const provider = new firebase.auth.GoogleAuthProvider();
 
     try {
-        const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
-
-        // 1. Authenticate user via Google Popup first to obtain their UID
         const result = await auth.signInWithPopup(provider);
         const user = result.user;
+        const userEmail = (user.email || "").toLowerCase();
 
-        // 2. Query the single-session lock status in Firestore[cite: 4]
-        const docSnap = await sessionLockDoc.get();
-
-        if (docSnap.exists) {
-            const activeUid = docSnap.data()[lockKey];
-
-            // If a different Google UID is actively locked in, reject sign-in and sign out[cite: 4]
-            if (activeUid && activeUid !== user.uid) {
-                await auth.signOut();
-                alert(`Sign-in rejected: A ${role} is already signed in. Only one active ${role} session is allowed.`);
-                return;
-            }
+        // 1. Check Manager email authorization
+        if (role === 'manager' && userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
+            return;
         }
 
-        // 3. Lock or maintain session ownership for this role[cite: 4]
-        await sessionLockDoc.set({ [lockKey]: user.uid }, { merge: true });
+        // 2. Check Operator email authorization
+        if (role === 'operator' && userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
+            return;
+        }
 
         const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
         sessionStorage.setItem("userRole", formattedRole);
@@ -234,7 +232,7 @@ async function signInRoleWithGoogle(role) {
 }
 
 /**
- * Standard Google Sign-In for Employees (Allows multiple concurrent users)[cite: 4].
+ * Standard Google Sign-In for Employees (Allows multiple concurrent users).
  */
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -278,7 +276,7 @@ function updateUserUI(isLoggedIn) {
 async function logoutUser() {
     const normalizedRole = (currentRole || "").toLowerCase();
     
-    // Release single-session lock when logging out of Manager or Operator roles[cite: 4]
+    // Release single-session lock when logging out of Manager or Operator roles
     if (normalizedRole === "manager" || normalizedRole === "operator") {
         const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
         try {
