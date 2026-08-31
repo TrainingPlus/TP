@@ -1,645 +1,651 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operator Portal - Course & Class Management</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operator Portal</title>
+  <!-- XLSX Library for Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+        --bg-color: #f2f7f5;
+        --card-bg: #ffffff;
+        --text-primary: #2d3748;
+        --text-muted: #718096;
+        --border-color: #e2e8f0;
+        --accent-mint: #a8e6cf;
+        --accent-mint-dark: #81c784;
+        --accent-slate-blue: #709fb0;
+        --danger-red: #e57373;
+        --valid-green: #38a169;
+    }
 
-    <style>
-        :root {
-            --bg-primary: #0f172a;
-            --bg-card: rgba(30, 41, 59, 0.7);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-mint: #5eead4;
-            --accent-blue: #38bdf8;
-            --danger-red: #f87171;
-        }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        padding-bottom: 70px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
 
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    /* Header & Navigation */
+    .top-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--accent-slate-blue);
+        padding: 12px 24px;
+        color: white;
+    }
 
-        /* Top Header Navigation */
-        .top-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+    .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
 
-        .nav-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    .search-container input {
+        padding: 7px 14px;
+        border-radius: 20px;
+        border: none;
+        outline: none;
+        font-size: 0.85rem;
+        width: 220px;
+    }
 
-        #operator-email-display {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            font-size: 0.85rem;
-            color: var(--accent-mint);
-        }
+    .nav-controls {
+        display: flex;
+        gap: 8px;
+    }
 
-        /* Responsive 3-Column Grid */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
+    .nav-btn {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 7px 14px;
+        border-radius: 18px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background-color 0.2s ease;
+    }
 
-        @media (max-width: 992px) {
-            .grid-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
+    .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
+    .logout-btn:hover { background-color: var(--danger-red); }
 
-        @media (max-width: 600px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-            }
-        }
+    /* Main Container & Cards */
+    main {
+        flex: 1;
+        width: 100%;
+    }
 
-        /* Card Styling & Hover Dynamics */
-        .square-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 160px;
-            cursor: pointer;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-        }
+    .card-view {
+        max-width: 800px;
+        margin: 30px auto;
+        background: var(--card-bg);
+        padding: 28px;
+        border-radius: 16px;
+        border: 1px solid #e8f0ec;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
 
-        .square-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-            border-color: var(--accent-mint);
-        }
+    .hidden { display: none !important; }
 
-        .square-card h3, .square-card h4 {
-            font-size: 1.1rem;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
+    .view { display: none; }
+    .view.active { display: block; }
 
-        .square-card p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+    /* Forms & Inputs */
+    .standard-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
 
-        /* Buttons */
-        .nav-btn, .primary-btn, .secondary-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
+    .standard-form label, .grid-form label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.88rem;
+        gap: 4px;
+        font-weight: 600;
+    }
 
-        .primary-btn {
-            background: linear-gradient(135deg, var(--accent-mint), var(--accent-blue));
-            color: #0f172a;
-        }
+    .standard-form input, .grid-form input, .grid-form select {
+        padding: 10px 12px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        outline: none;
+        font-size: 0.9rem;
+    }
 
-        .primary-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.02);
-        }
+    .standard-form input:focus, .grid-form input:focus, .grid-form select:focus {
+        border-color: var(--accent-slate-blue);
+    }
 
-        .secondary-btn {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }
+    .primary-btn {
+        background-color: var(--accent-mint);
+        color: #2c5244;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
 
-        .secondary-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
+    .primary-btn:hover { background-color: var(--accent-mint-dark); color: white; }
 
-        .logout-btn {
-            background: rgba(248, 113, 113, 0.15);
-            color: var(--danger-red);
-            border: 1px solid rgba(248, 113, 113, 0.3);
-        }
+    .secondary-btn {
+        background-color: #edf2f0;
+        color: var(--text-muted);
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
 
-        .logout-btn:hover {
-            background: var(--danger-red);
-            color: #fff;
-        }
+    .secondary-btn:hover {
+        background-color: var(--border-color);
+        color: var(--text-primary);
+    }
 
-        /* Table Design */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-        }
+    .button-group { display: flex; gap: 10px; }
 
-        th, td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
+    /* Grid Display for Courses & Classes */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 1rem;
+    }
 
-        th {
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--accent-blue);
-        }
+    .grid-item {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e1ebe6;
+        text-align: center;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
 
-        main {
-            padding: 2rem;
-            flex: 1;
-        }
+    .grid-item:hover {
+        border-color: var(--accent-slate-blue);
+        color: var(--accent-slate-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(112, 159, 176, 0.15);
+    }
 
-        .hidden { display: none !important; }
+    .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+    /* Student Directory Table */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card-bg);
+        margin-top: 1rem;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
 
-        .bottom-footer {
-            text-align: center;
-            padding: 1rem;
-            border-top: 1px solid var(--border-color);
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-    </style>
+    th, td {
+        border: 1px solid var(--border-color);
+        padding: 12px 14px;
+        text-align: left;
+        font-size: 0.88rem;
+    }
+
+    th {
+        background-color: #f4f9f7;
+        font-weight: 600;
+    }
+
+    /* Modal Overlay */
+    .modal {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 2000;
+    }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 380px; position: relative; }
+    .close-btn { position: absolute; top: 12px; right: 16px; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); }
+
+    /* Floating Chat Widget */
+    #chat-widget { position: fixed; bottom: 50px; right: 20px; z-index: 1000; }
+
+    .chat-fab {
+        position: relative;
+        width: 50px; 
+        height: 50px; 
+        border-radius: 50%; 
+        background: var(--accent-slate-blue);
+        color: white; 
+        border: none; 
+        font-size: 1.4rem; 
+        cursor: pointer; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    #chat-unread-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background-color: var(--danger-red);
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: bold;
+        line-height: 1;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 9999px;
+        border: 2px solid var(--card-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+    }
+
+    .chat-box {
+        width: 310px; height: 400px; background: white; border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
+        display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; right: 0;
+    }
+    .chat-header { background: var(--accent-slate-blue); color: white; padding: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Chat Bubbles */
+    .chat-messages {
+        flex: 1;
+        padding: 12px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background-color: #fafbfc;
+    }
+
+    .chat-msg {
+        max-width: 82%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    .chat-msg.my-msg {
+        align-self: flex-end;
+        background-color: var(--accent-slate-blue);
+        color: #ffffff;
+        border-bottom-right-radius: 2px;
+        text-align: start;
+    }
+
+    .chat-msg.other-msg {
+        align-self: flex-start;
+        background-color: #edf2f7;
+        color: var(--text-primary);
+        border-bottom-left-radius: 2px;
+        text-align: start;
+    }
+
+    .msg-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.72rem;
+        margin-bottom: 4px;
+        opacity: 0.9;
+    }
+
+    .chat-msg.my-msg .msg-time { color: #e2e8f0; }
+    .chat-msg.other-msg .msg-time { color: var(--text-muted); }
+    .msg-body { word-break: break-word; }
+
+    .chat-input-row { display: flex; padding: 10px; border-top: 1px solid var(--border-color); background: #ffffff; gap: 6px; align-items: center; }
+    .chat-input-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; }
+
+    /* Emoji Picker */
+    .emoji-toggle-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0 4px;
+        transition: transform 0.1s ease;
+    }
+    .emoji-toggle-btn:hover { transform: scale(1.15); }
+
+    .emoji-picker-container {
+        position: absolute;
+        bottom: 52px;
+        left: 10px;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1050;
+    }
+    .emoji-picker-container span {
+        font-size: 1.2rem;
+        cursor: pointer;
+        text-align: center;
+        border-radius: 4px;
+        padding: 2px;
+        transition: background 0.15s;
+    }
+    .emoji-picker-container span:hover { background-color: #edf2f7; }
+
+    /* RTL Adjustments */
+    body[dir="rtl"] { direction: rtl; text-align: right; }
+    body[dir="rtl"] th, body[dir="rtl"] td { text-align: right; }
+    body[dir="rtl"] #chat-widget { right: auto; left: 20px; }
+    body[dir="rtl"] .chat-box { right: auto; left: 0; }
+    body[dir="rtl"] .emoji-picker-container { left: auto; right: 10px; }
+
+    /* Bottom Footer */
+    .bottom-footer {
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background-color: #1a202c; color: #a0aec0; text-align: center;
+        padding: 8px; font-size: 0.82rem; z-index: 900;
+    }
+  </style>
 </head>
 <body>
 
-    <header class="top-nav">
-        <h2>Operator Portal</h2>
-        <div class="nav-controls">
-            <button class="nav-btn secondary-btn" onclick="showCoursesView()">Courses</button>
-            <span id="operator-email-display">Authenticating...</span>
-            <button class="nav-btn secondary-btn" onclick="toggleLanguage()" id="lang-btn">EN / AR</button>
-            <button id="logoutBtn" onclick="handleLogout()" class="nav-btn logout-btn">Logout</button>
+  <!-- Header -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <h2 style="font-size: 1.25rem; font-weight: 600;">Operator Portal</h2>
+    </div>
+    <div class="nav-controls">
+      <button class="nav-btn" onclick="showView('home-view')">Home</button>
+      <button class="nav-btn" onclick="showView('courses-view')">Courses</button>
+      <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR/EN</button>
+      <button class="nav-btn" onclick="showView('account-view')">Account</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Home View: Add Course -->
+    <section id="home-view" class="card-view view active">
+      <h3 style="margin-bottom: 16px;">Add New Course</h3>
+      <form id="add-course-form" class="standard-form" onsubmit="addCourse(event)">
+        <label for="course-name">
+          Course Name
+          <input type="text" id="course-name" required placeholder="e.g., Web Development">
+        </label>
+        <div>
+          <button type="submit" class="primary-btn">Add Course</button>
         </div>
-    </header>
+      </form>
+    </section>
 
-    <main>
-        <div id="view-courses">
-            <div class="dashboard-header">
-                <div>
-                    <h2>Assigned Courses</h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem;">Select a course block to manage its classes.</p>
-                </div>
-                <button class="primary-btn" onclick="addNewCourse()">+ Add Course</button>
-            </div>
-            <div id="courses-list-container" class="grid-container">
-                <p style="color: var(--text-muted);">Loading courses...</p>
-            </div>
+    <!-- Courses View -->
+    <section id="courses-view" class="card-view view">
+      <h3 style="margin-bottom: 16px;">Available Courses</h3>
+      <div id="courses-list" class="grid"></div>
+    </section>
+
+    <!-- Account View -->
+    <section id="account-view" class="card-view view">
+      <h3 style="margin-bottom: 16px;">Account Information</h3>
+      <form id="account-form" class="standard-form" onsubmit="saveAccountDetails(event)">
+        <label for="acc-name">
+          Operator Name
+          <input type="text" id="acc-name" value="Admin Operator" required>
+        </label>
+        <label for="acc-email">
+          Email Address
+          <input type="email" id="acc-email" value="operator@example.com" required>
+        </label>
+        <label for="acc-role">
+          Role
+          <input type="text" id="acc-role" value="System Administrator" disabled style="background-color: #f7fafc; color: var(--text-muted);">
+        </label>
+        <div>
+          <button type="submit" class="primary-btn">Save Changes</button>
         </div>
+      </form>
+    </section>
 
-        <div id="view-classes" class="hidden">
-            <div class="dashboard-header">
-                <div>
-                    <button class="secondary-btn" style="margin-bottom: 8px;" onclick="showCoursesView()">← Back to Courses</button>
-                    <h2 id="current-course-title">Course Classes</h2>
-                </div>
-                <button class="primary-btn" onclick="addNewClassToCurrentCourse()">+ Add Class</button>
-            </div>
-            <div id="classes-list-container" class="grid-container">
-                <p style="color: var(--text-muted);">Loading classes...</p>
-            </div>
-        </div>
+    <!-- Classes View -->
+    <section id="classes-view" class="card-view view">
+      <button class="secondary-btn" onclick="showView('courses-view')" style="margin-bottom: 1rem;">&larr; Back to Courses</button>
+      <h3 id="current-course-title" style="margin-bottom: 16px;">Classes</h3>
+      
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <h4 style="margin-bottom: 12px;">Add New Class</h4>
+        <form id="add-class-form" class="standard-form" onsubmit="addClass(event)">
+          <label for="class-name">
+            Class Name / Code
+            <input type="text" id="class-name" required placeholder="e.g., Class A - Morning">
+          </label>
+          <div>
+            <button type="submit" class="primary-btn">Add Class</button>
+          </div>
+        </form>
+      </div>
 
-        <div id="view-class-details" class="hidden">
-            <div class="dashboard-header">
-                <div>
-                    <button class="secondary-btn" style="margin-bottom: 8px;" onclick="showClassesView(currentCourseId, currentCourseName)">← Back to Classes</button>
-                    <h2 id="current-class-title">Class Roster</h2>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="secondary-btn" onclick="exportClassToExcel()">📥 Download Excel</button>
-                    <button class="primary-btn" onclick="addStudentToCurrentClass()">+ Add Student</button>
-                </div>
-            </div>
+      <div id="classes-list" class="grid" style="margin-top: 20px;"></div>
+    </section>
 
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Student CPR</th>
-                            <th>Tamkeen Status</th>
-                            <th>Comments</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="students-table-body">
-                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading students...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+    <!-- Class Detail View (Students Table) -->
+    <section id="students-view" class="card-view view">
+      <button class="secondary-btn" onclick="showView('classes-view')" style="margin-bottom: 1rem;">&larr; Back to Classes</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 id="current-class-title" style="margin: 0;">Student Records</h3>
+        <button onclick="exportToExcel()" class="primary-btn">Download Excel</button>
+      </div>
 
-    <footer class="bottom-footer">
-        <span id="footer-datetime">Loading date & time...</span>
-    </footer>
+      <!-- Add Student Form -->
+      <div style="background: #f8faf9; padding: 16px; border-radius: 12px; border: 1px solid #e1ebe6; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 12px;">Add Student Record</h4>
+        <form id="add-student-form" class="grid-form" onsubmit="addStudent(event)">
+          <label>
+            Student Name
+            <input type="text" id="std-name" required>
+          </label>
+          <label>
+            Student CPR
+            <input type="text" id="std-cpr" required>
+          </label>
+          <label>
+            Tamkeen Status
+            <select id="std-status">
+              <option value="Accepted">Accepted</option>
+              <option value="Under Processing">Under Processing</option>
+              <option value="Withdrawn">Withdrawn</option>
+            </select>
+          </label>
+          <label>
+            Comment
+            <input type="text" id="std-comment">
+          </label>
+          <div style="grid-column: 1 / -1; display: flex; align-items: flex-end;">
+            <button type="submit" class="primary-btn">Add Student</button>
+          </div>
+        </form>
+      </div>
 
-    <script src="script.js"></script>
+      <!-- Students Table -->
+      <table id="students-table">
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Student CPR</th>
+            <th>Tamkeen Status</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody id="students-table-body">
+          <!-- Data populated dynamically -->
+        </tbody>
+      </table>
+    </section>
+  </main>
 
-    <script>
-        let currentCourseId = null;
-        let currentCourseName = "";
-        let currentClassId = null;
-        let currentClassName = "";
-        let currentStudentsData = [];
-        
-        // Active unsubscribe listeners for realtime Firestore cleanup
-        let unsubscribeCourses = null;
-        let unsubscribeClasses = null;
-        let unsubscribeStudents = null;
+  <!-- Footer -->
+  <footer class="bottom-footer">
+    <span id="datetime">Loading time...</span>
+  </footer>
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
+  <script>
+    // State Data Structure
+    let state = {
+      courses: [],
+      selectedCourseIndex: null,
+      selectedClassIndex: null,
+      currentLang: 'EN'
+    };
 
-        function updateDateTime() {
-            const now = new Date();
-            const footerEl = document.getElementById('footer-datetime');
-            if (footerEl) footerEl.innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
-        setInterval(updateDateTime, 1000);
-        updateDateTime();
+    // Navigation Handler
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
 
-        function toggleLanguage() {
-            const isRTL = document.body.getAttribute('dir') === 'rtl';
-            document.body.setAttribute('dir', isRTL ? 'ltr' : 'rtl');
-            document.getElementById('lang-btn').innerText = isRTL ? 'EN / AR' : 'AR / EN';
-        }
+    // Language Toggle
+    function toggleLanguage() {
+      state.currentLang = state.currentLang === 'EN' ? 'AR' : 'EN';
+      document.getElementById('lang-btn').innerText = state.currentLang === 'EN' ? 'AR/EN' : 'EN/AR';
+      document.body.dir = state.currentLang === 'AR' ? 'rtl' : 'ltr';
+    }
 
-        function handleLogout() {
-            if (typeof logoutUser === 'function') {
-                logoutUser();
-            } else {
-                const authInstance = window.auth || (typeof firebase !== 'undefined' && firebase.auth());
-                if (authInstance) {
-                    authInstance.signOut().then(() => { window.location.href = "index.html"; });
-                }
-            }
-        }
+    // Account Form Save
+    function saveAccountDetails(e) {
+      e.preventDefault();
+      alert('Account details updated successfully!');
+    }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const authInstance = window.auth || (typeof firebase !== 'undefined' && firebase.auth());
-            if (authInstance) {
-                authInstance.onAuthStateChanged((user) => {
-                    if (user) {
-                        const emailDisplay = document.getElementById('operator-email-display');
-                        if (emailDisplay) emailDisplay.innerText = user.email;
-                        showCoursesView();
-                    } else {
-                        window.location.href = "index.html";
-                    }
-                });
-            }
-        });
+    // Add Course
+    function addCourse(e) {
+      e.preventDefault();
+      const input = document.getElementById('course-name');
+      state.courses.push({ name: input.value, classes: [] });
+      input.value = '';
+      renderCourses();
+      showView('courses-view');
+    }
 
-        function clearListeners() {
-            if (unsubscribeClasses) unsubscribeClasses();
-            if (unsubscribeStudents) unsubscribeStudents();
-        }
+    // Render Courses List
+    function renderCourses() {
+      const container = document.getElementById('courses-list');
+      container.innerHTML = '';
+      state.courses.forEach((course, index) => {
+        const div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerText = course.name;
+        div.onclick = () => openCourse(index);
+        container.appendChild(div);
+      });
+    }
 
-        function showCoursesView() {
-            clearListeners();
-            document.getElementById('view-courses').classList.remove('hidden');
-            document.getElementById('view-classes').classList.add('hidden');
-            document.getElementById('view-class-details').classList.add('hidden');
-            loadManagerCourses();
-        }
+    // Open Specific Course
+    function openCourse(index) {
+      state.selectedCourseIndex = index;
+      document.getElementById('current-course-title').innerText = `Classes for ${state.courses[index].name}`;
+      renderClasses();
+      showView('classes-view');
+    }
 
-        function showClassesView(courseId, courseName) {
-            clearListeners();
-            currentCourseId = courseId;
-            currentCourseName = courseName;
-            document.getElementById('current-course-title').innerText = `Course: ${courseName}`;
-            document.getElementById('view-courses').classList.add('hidden');
-            document.getElementById('view-classes').classList.remove('hidden');
-            document.getElementById('view-class-details').classList.add('hidden');
-            loadClassesForCourse(courseId);
-        }
+    // Add Class
+    function addClass(e) {
+      e.preventDefault();
+      const input = document.getElementById('class-name');
+      state.courses[state.selectedCourseIndex].classes.push({ name: input.value, students: [] });
+      input.value = '';
+      renderClasses();
+    }
 
-        function showClassDetailsView(classId, className) {
-            if (unsubscribeStudents) unsubscribeStudents();
-            currentClassId = classId;
-            currentClassName = className;
-            document.getElementById('current-class-title').innerText = `${currentCourseName} → ${className}`;
-            document.getElementById('view-courses').classList.add('hidden');
-            document.getElementById('view-classes').classList.add('hidden');
-            document.getElementById('view-class-details').classList.remove('hidden');
-            loadStudentsForClass(currentCourseId, classId);
-        }
+    // Render Classes List
+    function renderClasses() {
+      const container = document.getElementById('classes-list');
+      container.innerHTML = '';
+      const currentClasses = state.courses[state.selectedCourseIndex].classes;
+      currentClasses.forEach((cls, index) => {
+        const div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerText = cls.name;
+        div.onclick = () => openClass(index);
+        container.appendChild(div);
+      });
+    }
 
-        function loadManagerCourses() {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance) return;
+    // Open Specific Class
+    function openClass(index) {
+      state.selectedClassIndex = index;
+      const cls = state.courses[state.selectedCourseIndex].classes[index];
+      document.getElementById('current-class-title').innerText = `Students - ${cls.name}`;
+      renderStudents();
+      showView('students-view');
+    }
 
-            if (unsubscribeCourses) unsubscribeCourses();
-            unsubscribeCourses = dbInstance.collection("courses").onSnapshot((snapshot) => {
-                const container = document.getElementById("courses-list-container");
-                container.innerHTML = "";
+    // Add Student
+    function addStudent(e) {
+      e.preventDefault();
+      const name = document.getElementById('std-name').value;
+      const cpr = document.getElementById('std-cpr').value;
+      const status = document.getElementById('std-status').value;
+      const comment = document.getElementById('std-comment').value;
 
-                if (snapshot.empty) {
-                    container.innerHTML = "<p style='color: var(--text-muted); grid-column: 1 / -1;'>No courses found.</p>";
-                    return;
-                }
+      state.courses[state.selectedCourseIndex].classes[state.selectedClassIndex].students.push({
+        name, cpr, status, comment
+      });
 
-                snapshot.forEach((doc) => {
-                    const course = doc.data();
-                    const courseId = doc.id;
-                    const cName = course.courseName || "Unnamed Course";
+      document.getElementById('add-student-form').reset();
+      renderStudents();
+    }
 
-                    const card = document.createElement("div");
-                    card.className = "square-card";
-                    card.onclick = () => showClassesView(courseId, cName);
+    // Render Students Table
+    function renderStudents() {
+      const tbody = document.getElementById('students-table-body');
+      tbody.innerHTML = '';
+      const students = state.courses[state.selectedCourseIndex].classes[state.selectedClassIndex].students;
 
-                    card.innerHTML = `
-                        <div>
-                            <h3>📚 ${escapeHTML(cName)}</h3>
-                            <p>Click to open course classes</p>
-                        </div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <span style="color: var(--accent-mint); font-size: 0.8rem; font-weight: 600;">Manage Classes →</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            }, (err) => {
-                console.error("Firestore error:", err);
-            });
-        }
+      students.forEach(std => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${std.name}</td>
+          <td>${std.cpr}</td>
+          <td>${std.status}</td>
+          <td>${std.comment}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-        async function addNewCourse() {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            const courseName = prompt("Enter New Course Name:");
-            if (!courseName || !courseName.trim() || !dbInstance) return;
+    // Export Table to Excel
+    function exportToExcel() {
+      const table = document.getElementById('students-table');
+      const workbook = XLSX.utils.table_to_book(table, { sheet: "Students" });
+      XLSX.writeFile(workbook, "student_records.xlsx");
+    }
 
-            try {
-                await dbInstance.collection("courses").add({
-                    courseName: courseName.trim(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                alert("Error adding course: " + err.message);
-            }
-        }
-
-        function loadClassesForCourse(courseId) {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance) return;
-
-            if (unsubscribeClasses) unsubscribeClasses();
-            unsubscribeClasses = dbInstance.collection("courses").doc(courseId).collection("classes").onSnapshot((snapshot) => {
-                const container = document.getElementById("classes-list-container");
-                container.innerHTML = "";
-
-                if (snapshot.empty) {
-                    container.innerHTML = "<p style='color: var(--text-muted); grid-column: 1 / -1;'>No classes created under this course yet.</p>";
-                    return;
-                }
-
-                snapshot.forEach((classDoc) => {
-                    const classData = classDoc.data();
-                    const classId = classDoc.id;
-                    const className = classData.className || "Unnamed Class";
-
-                    const card = document.createElement("div");
-                    card.className = "square-card";
-                    card.onclick = () => showClassDetailsView(classId, className);
-
-                    card.innerHTML = `
-                        <div>
-                            <h4>🏫 Class: ${escapeHTML(className)}</h4>
-                            <p>View roster & manage enrolled students</p>
-                        </div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <span style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 600;">Open Roster →</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            });
-        }
-
-        async function addNewClassToCurrentCourse() {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!currentCourseId || !dbInstance) return;
-
-            const className = prompt("Enter Class Name (e.g., Section 1, Batch A):");
-            if (!className || !className.trim()) return;
-
-            try {
-                await dbInstance.collection("courses").doc(currentCourseId).collection("classes").add({
-                    className: className.trim(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                alert("Error adding class: " + err.message);
-            }
-        }
-
-        function loadStudentsForClass(courseId, classId) {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance) return;
-
-            if (unsubscribeStudents) unsubscribeStudents();
-            unsubscribeStudents = dbInstance.collection("courses").doc(courseId)
-                .collection("classes").doc(classId)
-                .collection("students").onSnapshot((snapshot) => {
-                    const tbody = document.getElementById("students-table-body");
-                    tbody.innerHTML = "";
-                    currentStudentsData = [];
-
-                    if (snapshot.empty) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No students registered yet.</td></tr>`;
-                        return;
-                    }
-
-                    snapshot.forEach((doc) => {
-                        const student = doc.data();
-                        const studentId = doc.id;
-                        const sName = student.studentName || "N/A";
-                        const cpr = student.cpr || studentId;
-                        const status = student.tamkeenStatus || "Under Process";
-                        const comment = student.comment || "";
-
-                        currentStudentsData.push({ studentName: sName, cpr, tamkeenStatus: status, comment });
-
-                        const row = document.createElement("tr");
-
-                        const tdName = document.createElement("td");
-                        tdName.textContent = sName;
-                        row.appendChild(tdName);
-
-                        const tdCpr = document.createElement("td");
-                        tdCpr.textContent = cpr;
-                        row.appendChild(tdCpr);
-
-                        const tdStatus = document.createElement("td");
-                        const selectStatus = document.createElement("select");
-                        selectStatus.style.cssText = "padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border-color);";
-                        selectStatus.onchange = (e) => updateStudentField(studentId, 'tamkeenStatus', e.target.value);
-                        
-                        ['Accepted', 'Under Process', 'Withdrawn'].forEach((optVal) => {
-                            const opt = document.createElement("option");
-                            opt.value = optVal;
-                            opt.textContent = optVal;
-                            opt.style.background = "#0f172a";
-                            if (status === optVal) opt.selected = true;
-                            selectStatus.appendChild(opt);
-                        });
-                        tdStatus.appendChild(selectStatus);
-                        row.appendChild(tdStatus);
-
-                        const tdComment = document.createElement("td");
-                        const textSpan = document.createElement("span");
-                        textSpan.innerHTML = comment ? escapeHTML(comment) : '<i style="color:var(--text-muted);">No comments</i>';
-                        tdComment.appendChild(textSpan);
-
-                        const commentBtn = document.createElement("button");
-                        commentBtn.className = "secondary-btn";
-                        commentBtn.style.cssText = "padding: 2px 6px; font-size: 0.75rem; margin-left: 8px;";
-                        commentBtn.innerText = "💬 Edit";
-                        commentBtn.onclick = () => addComment(studentId, comment);
-                        tdComment.appendChild(commentBtn);
-                        row.appendChild(tdComment);
-
-                        const tdAction = document.createElement("td");
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.className = "logout-btn";
-                        deleteBtn.style.cssText = "padding: 4px 8px; font-size: 0.8rem; border-radius: 6px;";
-                        deleteBtn.innerText = "🗑️ Delete";
-                        deleteBtn.onclick = () => deleteStudent(studentId);
-                        tdAction.appendChild(deleteBtn);
-                        row.appendChild(tdAction);
-
-                        tbody.appendChild(row);
-                    });
-                }, (err) => {
-                    console.error("Firestore listener error:", err);
-                });
-        }
-
-        async function addStudentToCurrentClass() {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance || !currentCourseId || !currentClassId) return;
-
-            const studentName = prompt("Enter Student Name:");
-            if (!studentName || !studentName.trim()) return;
-
-            const cpr = prompt("Enter 9-digit CPR:");
-            if (!cpr || !/^\d{9}$/.test(cpr.trim())) {
-                alert("Please enter a valid 9-digit CPR number.");
-                return;
-            }
-
-            try {
-                await dbInstance.collection("courses").doc(currentCourseId)
-                    .collection("classes").doc(currentClassId)
-                    .collection("students").doc(cpr.trim()).set({
-                        studentName: studentName.trim(),
-                        cpr: cpr.trim(),
-                        tamkeenStatus: "Under Process",
-                        comment: "",
-                        addedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-            } catch (err) {
-                alert("Failed to add student: " + err.message);
-            }
-        }
-
-        async function updateStudentField(studentId, field, value) {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance || !currentCourseId || !currentClassId) return;
-
-            try {
-                await dbInstance.collection("courses").doc(currentCourseId)
-                    .collection("classes").doc(currentClassId)
-                    .collection("students").doc(studentId).update({ [field]: value });
-            } catch (err) {
-                alert("Failed to update: " + err.message);
-            }
-        }
-
-        async function addComment(studentId, existingComment) {
-            const newComment = prompt("Add/Update Comment:", existingComment || "");
-            if (newComment === null) return;
-            updateStudentField(studentId, 'comment', newComment.trim());
-        }
-
-        async function deleteStudent(studentId) {
-            const dbInstance = window.db || (typeof firebase !== 'undefined' && firebase.firestore());
-            if (!dbInstance || !currentCourseId || !currentClassId || !confirm("Are you sure you want to delete this student record?")) return;
-
-            try {
-                await dbInstance.collection("courses").doc(currentCourseId)
-                    .collection("classes").doc(currentClassId)
-                    .collection("students").doc(studentId).delete();
-            } catch (err) {
-                alert("Failed to delete student: " + err.message);
-            }
-        }
-
-        function exportClassToExcel() {
-            if (!currentStudentsData || currentStudentsData.length === 0) {
-                alert("No student data available to download.");
-                return;
-            }
-
-            const worksheet = XLSX.utils.json_to_sheet(currentStudentsData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-            const fileName = `${currentCourseName}_${currentClassName}_Students.xlsx`.replace(/\s+/g, '_');
-            XLSX.writeFile(workbook, fileName);
-        }
-    </script>
+    // Footer Live Date & Time
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('datetime').innerText = now.toLocaleString();
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+  </script>
 </body>
 </html>
