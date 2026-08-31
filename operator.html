@@ -52,15 +52,6 @@
         gap: 16px;
     }
 
-    .search-container input {
-        padding: 7px 14px;
-        border-radius: 20px;
-        border: none;
-        outline: none;
-        font-size: 0.85rem;
-        width: 220px;
-    }
-
     .nav-controls {
         display: flex;
         gap: 8px;
@@ -78,7 +69,6 @@
     }
 
     .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
-    .logout-btn:hover { background-color: var(--danger-red); }
 
     /* Main Container & Cards */
     main {
@@ -95,8 +85,6 @@
         border: 1px solid #e8f0ec;
         box-shadow: 0 8px 20px rgba(0,0,0,0.04);
     }
-
-    .hidden { display: none !important; }
 
     .view { display: none; }
     .view.active { display: block; }
@@ -128,6 +116,12 @@
         border-color: var(--accent-slate-blue);
     }
 
+    .standard-form input:disabled, .grid-form input:disabled {
+        background-color: #edf2f7;
+        color: var(--text-muted);
+        cursor: not-allowed;
+    }
+
     .primary-btn {
         background-color: var(--accent-mint);
         color: #2c5244;
@@ -155,8 +149,6 @@
         background-color: var(--border-color);
         color: var(--text-primary);
     }
-
-    .button-group { display: flex; gap: 10px; }
 
     /* Grid Display for Courses & Classes */
     .grid {
@@ -209,155 +201,9 @@
         font-weight: 600;
     }
 
-    /* Modal Overlay */
-    .modal {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(4px);
-        display: flex; justify-content: center; align-items: center;
-        z-index: 2000;
-    }
-    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 380px; position: relative; }
-    .close-btn { position: absolute; top: 12px; right: 16px; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); }
-
-    /* Floating Chat Widget */
-    #chat-widget { position: fixed; bottom: 50px; right: 20px; z-index: 1000; }
-
-    .chat-fab {
-        position: relative;
-        width: 50px; 
-        height: 50px; 
-        border-radius: 50%; 
-        background: var(--accent-slate-blue);
-        color: white; 
-        border: none; 
-        font-size: 1.4rem; 
-        cursor: pointer; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-
-    #chat-unread-badge {
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        background-color: var(--danger-red);
-        color: #ffffff;
-        font-size: 0.72rem;
-        font-weight: bold;
-        line-height: 1;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 4px;
-        border-radius: 9999px;
-        border: 2px solid var(--card-bg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        z-index: 10;
-    }
-
-    .chat-box {
-        width: 310px; height: 400px; background: white; border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
-        display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; right: 0;
-    }
-    .chat-header { background: var(--accent-slate-blue); color: white; padding: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-
-    /* Chat Bubbles */
-    .chat-messages {
-        flex: 1;
-        padding: 12px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        background-color: #fafbfc;
-    }
-
-    .chat-msg {
-        max-width: 82%;
-        padding: 8px 12px;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        line-height: 1.4;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    .chat-msg.my-msg {
-        align-self: flex-end;
-        background-color: var(--accent-slate-blue);
-        color: #ffffff;
-        border-bottom-right-radius: 2px;
-        text-align: start;
-    }
-
-    .chat-msg.other-msg {
-        align-self: flex-start;
-        background-color: #edf2f7;
-        color: var(--text-primary);
-        border-bottom-left-radius: 2px;
-        text-align: start;
-    }
-
-    .msg-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.72rem;
-        margin-bottom: 4px;
-        opacity: 0.9;
-    }
-
-    .chat-msg.my-msg .msg-time { color: #e2e8f0; }
-    .chat-msg.other-msg .msg-time { color: var(--text-muted); }
-    .msg-body { word-break: break-word; }
-
-    .chat-input-row { display: flex; padding: 10px; border-top: 1px solid var(--border-color); background: #ffffff; gap: 6px; align-items: center; }
-    .chat-input-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; }
-
-    /* Emoji Picker */
-    .emoji-toggle-btn {
-        background: none;
-        border: none;
-        font-size: 1.2rem;
-        cursor: pointer;
-        padding: 0 4px;
-        transition: transform 0.1s ease;
-    }
-    .emoji-toggle-btn:hover { transform: scale(1.15); }
-
-    .emoji-picker-container {
-        position: absolute;
-        bottom: 52px;
-        left: 10px;
-        background: #ffffff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 8px;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1050;
-    }
-    .emoji-picker-container span {
-        font-size: 1.2rem;
-        cursor: pointer;
-        text-align: center;
-        border-radius: 4px;
-        padding: 2px;
-        transition: background 0.15s;
-    }
-    .emoji-picker-container span:hover { background-color: #edf2f7; }
-
     /* RTL Adjustments */
     body[dir="rtl"] { direction: rtl; text-align: right; }
     body[dir="rtl"] th, body[dir="rtl"] td { text-align: right; }
-    body[dir="rtl"] #chat-widget { right: auto; left: 20px; }
-    body[dir="rtl"] .chat-box { right: auto; left: 0; }
-    body[dir="rtl"] .emoji-picker-container { left: auto; right: 10px; }
 
     /* Bottom Footer */
     .bottom-footer {
@@ -406,19 +252,27 @@
 
     <!-- Account View -->
     <section id="account-view" class="card-view view">
-      <h3 style="margin-bottom: 16px;">Account Information</h3>
+      <h3 style="margin-bottom: 16px;">Account Settings</h3>
       <form id="account-form" class="standard-form" onsubmit="saveAccountDetails(event)">
+        <label for="acc-email">
+          Signed-In Email (Default / Locked)
+          <input type="email" id="acc-email" disabled>
+        </label>
         <label for="acc-name">
           Operator Name
-          <input type="text" id="acc-name" value="Admin Operator" required>
+          <input type="text" id="acc-name" placeholder="Enter your full name" required>
         </label>
-        <label for="acc-email">
-          Email Address
-          <input type="email" id="acc-email" value="operator@example.com" required>
+        <label for="acc-phone">
+          Phone Number
+          <input type="text" id="acc-phone" placeholder="Enter your phone number">
         </label>
         <label for="acc-role">
-          Role
-          <input type="text" id="acc-role" value="System Administrator" disabled style="background-color: #f7fafc; color: var(--text-muted);">
+          Role / Department
+          <select id="acc-role">
+            <option value="System Administrator">System Administrator</option>
+            <option value="Operator">Operator</option>
+            <option value="Course Coordinator">Course Coordinator</option>
+          </select>
         </label>
         <div>
           <button type="submit" class="primary-btn">Save Changes</button>
@@ -510,11 +364,28 @@
   <script>
     // State Data Structure
     let state = {
+      userEmail: "operator@institute.com", // Default signed-in email
+      accountDetails: {
+        name: "Admin Operator",
+        phone: "+973 36000000",
+        role: "System Administrator"
+      },
       courses: [],
       selectedCourseIndex: null,
       selectedClassIndex: null,
       currentLang: 'EN'
     };
+
+    // Initialize Account Page Data
+    function initAccountDetails() {
+      // Set fixed signed-in email
+      document.getElementById('acc-email').value = state.userEmail;
+      
+      // Set editable defaults
+      document.getElementById('acc-name').value = state.accountDetails.name;
+      document.getElementById('acc-phone').value = state.accountDetails.phone;
+      document.getElementById('acc-role').value = state.accountDetails.role;
+    }
 
     // Navigation Handler
     function showView(viewId) {
@@ -532,6 +403,9 @@
     // Account Form Save
     function saveAccountDetails(e) {
       e.preventDefault();
+      state.accountDetails.name = document.getElementById('acc-name').value;
+      state.accountDetails.phone = document.getElementById('acc-phone').value;
+      state.accountDetails.role = document.getElementById('acc-role').value;
       alert('Account details updated successfully!');
     }
 
@@ -644,6 +518,9 @@
       const now = new Date();
       document.getElementById('datetime').innerText = now.toLocaleString();
     }
+
+    // Initialize Page
+    initAccountDetails();
     setInterval(updateDateTime, 1000);
     updateDateTime();
   </script>
