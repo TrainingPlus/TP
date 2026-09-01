@@ -4,16 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Operator Dashboard</title>
-
-  <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-
-  <!-- SheetJS for Excel Exports (Single Clean Import) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
+  <!-- XLSX Library for Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
         --bg-color: #f2f7f5;
@@ -226,15 +218,13 @@
   <!-- Header -->
   <header class="top-nav">
     <div class="nav-left">
-      <!-- Title Updated to Dashboard -->
-      <h2 style="font-size: 1.25rem; font-weight: 600;">Operator Dashboard</h2>
+      <h2 style="font-size: 1.25rem; font-weight: 600;">Operator Portal</h2>
     </div>
     <div class="nav-controls">
       <button class="nav-btn" onclick="showView('home-view')">Home</button>
       <button class="nav-btn" onclick="showView('courses-view')">Courses</button>
       <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR/EN</button>
-      <button class="nav-btn" id="account-btn" onclick="showView('account-view')">Account</button>
-      <button class="nav-btn" id="logout-btn" onclick="signOutUser()" style="background-color: var(--danger-red);">Logout</button>
+      <button class="nav-btn" onclick="showView('account-view')">Account</button>
     </div>
   </header>
 
@@ -252,15 +242,6 @@
           <button type="submit" class="primary-btn">Add Course</button>
         </div>
       </form>
-
-      <!-- Added CPR Input Hook for Firebase script compatibility -->
-      <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-        <h3 style="margin-bottom: 12px;">Quick Student Add (CPR)</h3>
-        <div style="display: flex; gap: 10px;">
-          <input type="text" id="cpr-input" placeholder="Enter 9-digit CPR" style="flex: 1; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border-color);">
-          <button type="button" class="primary-btn" onclick="addStudentCPR()">Add CPR Record</button>
-        </div>
-      </div>
     </section>
 
     <!-- Courses View -->
@@ -325,7 +306,7 @@
       <button class="secondary-btn" onclick="showView('classes-view')" style="margin-bottom: 1rem;">&larr; Back to Classes</button>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 id="current-class-title" style="margin: 0;">Student Records</h3>
-        <button id="download-all-btn" onclick="exportToExcel()" class="primary-btn">Download Excel</button>
+        <button onclick="exportToExcel()" class="primary-btn">Download Excel</button>
       </div>
 
       <!-- Add Student Form -->
@@ -358,9 +339,6 @@
         </form>
       </div>
 
-      <!-- Container binding for script.js live directory -->
-      <div id="student-container"></div>
-
       <!-- Students Table -->
       <table id="students-table">
         <thead>
@@ -380,39 +358,49 @@
 
   <!-- Footer -->
   <footer class="bottom-footer">
-    <span id="live-footer-datetime">Loading time...</span>
+    <span id="datetime">Loading time...</span>
   </footer>
 
-  <!-- Page Initialization & UI View Handler -->
   <script>
+    // State Data Structure
     let state = {
-      userEmail: "madasaleh.188@gmail.com",
-      accountDetails: { name: "Operator Admin", phone: "+973 36000000", role: "Operator" },
+      userEmail: "operator@institute.com", // Default signed-in email
+      accountDetails: {
+        name: "Admin Operator",
+        phone: "+973 36000000",
+        role: "System Administrator"
+      },
       courses: [],
       selectedCourseIndex: null,
       selectedClassIndex: null,
       currentLang: 'EN'
     };
 
+    // Initialize Account Page Data
     function initAccountDetails() {
-      if(document.getElementById('acc-email')) document.getElementById('acc-email').value = state.userEmail;
-      if(document.getElementById('acc-name')) document.getElementById('acc-name').value = state.accountDetails.name;
-      if(document.getElementById('acc-phone')) document.getElementById('acc-phone').value = state.accountDetails.phone;
-      if(document.getElementById('acc-role')) document.getElementById('acc-role').value = state.accountDetails.role;
+      // Set fixed signed-in email
+      document.getElementById('acc-email').value = state.userEmail;
+      
+      // Set editable defaults
+      document.getElementById('acc-name').value = state.accountDetails.name;
+      document.getElementById('acc-phone').value = state.accountDetails.phone;
+      document.getElementById('acc-role').value = state.accountDetails.role;
     }
 
+    // Navigation Handler
     function showView(viewId) {
       document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-      const activeView = document.getElementById(viewId);
-      if(activeView) activeView.classList.add('active');
+      document.getElementById(viewId).classList.add('active');
     }
 
+    // Language Toggle
     function toggleLanguage() {
       state.currentLang = state.currentLang === 'EN' ? 'AR' : 'EN';
       document.getElementById('lang-btn').innerText = state.currentLang === 'EN' ? 'AR/EN' : 'EN/AR';
       document.body.dir = state.currentLang === 'AR' ? 'rtl' : 'ltr';
     }
 
+    // Account Form Save
     function saveAccountDetails(e) {
       e.preventDefault();
       state.accountDetails.name = document.getElementById('acc-name').value;
@@ -421,6 +409,7 @@
       alert('Account details updated successfully!');
     }
 
+    // Add Course
     function addCourse(e) {
       e.preventDefault();
       const input = document.getElementById('course-name');
@@ -430,6 +419,7 @@
       showView('courses-view');
     }
 
+    // Render Courses List
     function renderCourses() {
       const container = document.getElementById('courses-list');
       container.innerHTML = '';
@@ -442,6 +432,7 @@
       });
     }
 
+    // Open Specific Course
     function openCourse(index) {
       state.selectedCourseIndex = index;
       document.getElementById('current-course-title').innerText = `Classes for ${state.courses[index].name}`;
@@ -449,6 +440,7 @@
       showView('classes-view');
     }
 
+    // Add Class
     function addClass(e) {
       e.preventDefault();
       const input = document.getElementById('class-name');
@@ -457,6 +449,7 @@
       renderClasses();
     }
 
+    // Render Classes List
     function renderClasses() {
       const container = document.getElementById('classes-list');
       container.innerHTML = '';
@@ -470,6 +463,7 @@
       });
     }
 
+    // Open Specific Class
     function openClass(index) {
       state.selectedClassIndex = index;
       const cls = state.courses[state.selectedCourseIndex].classes[index];
@@ -478,6 +472,7 @@
       showView('students-view');
     }
 
+    // Add Student
     function addStudent(e) {
       e.preventDefault();
       const name = document.getElementById('std-name').value;
@@ -493,6 +488,7 @@
       renderStudents();
     }
 
+    // Render Students Table
     function renderStudents() {
       const tbody = document.getElementById('students-table-body');
       tbody.innerHTML = '';
@@ -510,16 +506,24 @@
       });
     }
 
+    // Export Table to Excel
     function exportToExcel() {
       const table = document.getElementById('students-table');
       const workbook = XLSX.utils.table_to_book(table, { sheet: "Students" });
       XLSX.writeFile(workbook, "student_records.xlsx");
     }
 
-    initAccountDetails();
-  </script>
+    // Footer Live Date & Time
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('datetime').innerText = now.toLocaleString();
+    }
 
-  <!-- External Firebase logic execution -->
+    // Initialize Page
+    initAccountDetails();
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+  </script>
   <script src="script.js"></script>
 </body>
 </html>
