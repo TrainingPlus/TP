@@ -16,6 +16,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // Designated single-account email addresses
 const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";  
@@ -156,7 +157,7 @@ function applyLanguageTranslations() {
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUserData = user;
-        currentRole = sessionStorage.getItem("userRole") || "Employee";
+        currentRole = sessionStorage.getItem("userRole") || "Operator";
         updateUserUI(true);
         listenToStudentDirectory();
         listenToGroupChat();
@@ -196,9 +197,6 @@ function selectRole(role) {
     document.getElementById(`form-${role}`)?.classList.remove('hidden');
 }
 
-/**
- * Enforces Single-Person Google Sign-In for restricted roles ('manager' | 'operator').
- */
 async function signInRoleWithGoogle(role) {
     const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -207,7 +205,6 @@ async function signInRoleWithGoogle(role) {
         const user = result.user;
         const userEmail = (user.email || "").toLowerCase();
 
-        // 1. Check Manager email authorization & Redirect
         if (role === 'manager') {
             if (userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
                 await auth.signOut();
@@ -216,11 +213,12 @@ async function signInRoleWithGoogle(role) {
             }
             sessionStorage.setItem("userRole", "Manager");
             currentRole = "Manager";
-            window.location.href = "manager.html";
+            if (!window.location.pathname.includes("manager.html")) {
+                window.location.href = "manager.html";
+            }
             return;
         }
 
-        // 2. Check Operator email authorization & Redirect
         if (role === 'operator') {
             if (userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
                 await auth.signOut();
@@ -229,7 +227,9 @@ async function signInRoleWithGoogle(role) {
             }
             sessionStorage.setItem("userRole", "Operator");
             currentRole = "Operator";
-            window.location.href = "operator.html";
+            if (!window.location.pathname.includes("operator.html")) {
+                window.location.href = "operator.html";
+            }
             return;
         }
 
@@ -239,9 +239,6 @@ async function signInRoleWithGoogle(role) {
     }
 }
 
-/**
- * Standard Google Sign-In for Employees (Blocks restricted Manager/Operator emails).
- */
 async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
@@ -249,7 +246,6 @@ async function signInWithGoogle() {
         const user = result.user;
         const userEmail = (user.email || "").toLowerCase();
 
-        // Prevent Operator or Manager emails from logging in as Employees
         if (userEmail === ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
             await auth.signOut();
             sessionStorage.removeItem("userRole");
@@ -266,7 +262,9 @@ async function signInWithGoogle() {
 
         sessionStorage.setItem("userRole", "Employee");
         currentRole = "Employee";
-        window.location.href = "employee.html";
+        if (!window.location.pathname.includes("employee.html")) {
+            window.location.href = "employee.html";
+        }
     } catch (error) {
         console.error("Google Sign-In Error:", error);
         alert("Sign-In Failed: " + error.message);
@@ -292,18 +290,22 @@ function updateUserUI(isLoggedIn) {
         if (idEl) idEl.innerText = simpleUserId;
         if (nameEl) nameEl.innerText = currentUserData.displayName || currentUserData.email?.split('@')[0] || "User";
         if (emailEl) emailEl.innerText = currentUserData.email || '';
-        if (roleEl) roleEl.innerText = currentRole || 'Employee';
+        if (roleEl) roleEl.innerText = currentRole || 'Operator';
 
-        showView('view-home');
+        // Safely check if home view exists in single-page mode
+        if (document.getElementById('view-home')) {
+            showView('view-home');
+        }
     } else {
-        showView('view-auth');
+        if (document.getElementById('view-auth')) {
+            showView('view-auth');
+        }
     }
 }
 
 async function logoutUser() {
     const normalizedRole = (currentRole || "").toLowerCase();
     
-    // Release single-session lock when logging out of Manager or Operator roles
     if (normalizedRole === "manager" || normalizedRole === "operator") {
         const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
         try {
@@ -318,9 +320,6 @@ async function logoutUser() {
     window.location.href = "index.html";
 }
 
-/**
- * Deletes the currently logged-in user's account and associated data.
- */
 async function deleteAccount() {
     const user = auth.currentUser;
     if (!user) {
@@ -329,12 +328,9 @@ async function deleteAccount() {
     }
 
     const warningMessage = "WARNING: Are you sure you want to delete your account?\n\n" +
-        "This action is permanent and CANNOT be undone. " +
-        "All of your account data, registered records, and personal settings will be permanently deleted.";
+        "This action is permanent and CANNOT be undone.";
 
-    if (!confirm(warningMessage)) {
-        return;
-    }
+    if (!confirm(warningMessage)) return;
 
     const confirmName = prompt(`Type "DELETE" to permanently remove your account (${user.email}):`);
     if (confirmName !== "DELETE") {
@@ -344,31 +340,24 @@ async function deleteAccount() {
 
     try {
         const userUid = user.uid;
-
-        // 1. Clear user profile document from Firestore
         await db.collection("users").doc(userUid).delete().catch(() => {});
 
-        // 2. Clear role lock if Operator or Manager
         const role = (sessionStorage.getItem("userRole") || "").toLowerCase();
         if (role === "operator" || role === "manager") {
             const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
             await sessionLockDoc.set({ [lockKey]: null }, { merge: true }).catch(() => {});
         }
 
-        // 3. Clear local session data
         sessionStorage.clear();
-
-        // 4. Delete authentication account
         await user.delete();
 
-        alert("Your account and all associated data have been permanently deleted.");
+        alert("Your account has been permanently deleted.");
         window.location.href = "index.html";
 
     } catch (error) {
         console.error("Error deleting account:", error);
-
         if (error.code === 'auth/requires-recent-login') {
-            alert("Security Notice: Deleting your account requires a fresh login. Please log out, sign in again, and retry deleting your account.");
+            alert("Security Notice: Please log out, sign in again, and retry deleting your account.");
             await auth.signOut();
             window.location.href = "index.html";
         } else {
@@ -376,6 +365,15 @@ async function deleteAccount() {
         }
     }
 }
+
+// Clear single-session lock on browser tab close
+window.addEventListener('beforeunload', () => {
+    const role = (currentRole || "").toLowerCase();
+    if (role === "operator" || role === "manager") {
+        const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+        sessionLockDoc.set({ [lockKey]: null }, { merge: true });
+    }
+});
 
 // ==========================================
 // 4. CPR RECORD MANAGEMENT
@@ -387,10 +385,7 @@ async function addStudentCPR() {
     const cpr = cprInput.value.trim();
 
     if (!/^\d{9}$/.test(cpr)) {
-        const errorMsg = (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang].alert_cpr_length) 
-            ? translations[currentLang].alert_cpr_length 
-            : "CPR must be exactly 9 digits.";
-        alert(errorMsg);
+        alert("CPR must be exactly 9 digits.");
         return;
     }
 
@@ -410,7 +405,6 @@ async function addStudentCPR() {
 
         if (docSnap.exists) {
             const existingData = docSnap.data();
-            
             const creatorUid = existingData.createdByUid;
             const creatorEmail = existingData.createdByEmail || existingData.added_by;
 
@@ -420,22 +414,7 @@ async function addStudentCPR() {
             if (isMyRecord) {
                 alert(`This CPR (${cpr}) is already registered by you.`);
             } else {
-                let username = existingData.createdByName || 
-                               existingData.username || 
-                               existingData.name || 
-                               existingData.added_by_name;
-
-                if (!username || username === "User") {
-                    const rawEmail = existingData.createdByEmail || existingData.added_by || existingData.email;
-                    if (rawEmail && rawEmail.includes('@')) {
-                        username = rawEmail.split('@')[0];
-                    } else if (rawEmail) {
-                        username = rawEmail;
-                    } else {
-                        username = "mada saleh";
-                    }
-                }
-
+                let username = existingData.createdByName || existingData.username || existingData.name || "mada saleh";
                 alert(`This CPR (${cpr}) is already registered by user: ${username}`);
             }
             return;
@@ -454,7 +433,11 @@ async function addStudentCPR() {
         });
 
         cprInput.value = '';
-        showView('view-cpr-success');
+        if (document.getElementById('view-cpr-success')) {
+            showView('view-cpr-success');
+        } else {
+            alert("CPR Added Successfully!");
+        }
 
     } catch (error) {
         console.error("Error processing CPR addition:", error);
@@ -536,72 +519,12 @@ function downloadAllStudentsData() {
         };
     });
 
-    const courseRows = [];
-    studentList.forEach(s => {
-        if (Array.isArray(s.courses) && s.courses.length > 0) {
-            s.courses.forEach(c => {
-                courseRows.push({
-                    "Student Name": s.name || '',
-                    "CPR": s.cpr || '',
-                    "Course Name": c.name || '',
-                    "Date Added": c.addedAt || ''
-                });
-            });
-        }
-    });
-
     const wb = XLSX.utils.book_new();
     const wsStudents = XLSX.utils.json_to_sheet(studentsRows);
     XLSX.utils.book_append_sheet(wb, wsStudents, "All Students");
 
-    if (courseRows.length > 0) {
-        const wsCourses = XLSX.utils.json_to_sheet(courseRows);
-        XLSX.utils.book_append_sheet(wb, wsCourses, "Course Details");
-    }
-
     const todayStr = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `All_Students_Data_${todayStr}.xlsx`);
-}
-
-function downloadSingleStudentData(studentId) {
-    const student = studentList.find(s => s.id === studentId);
-    if (!student) {
-        alert("Student record not found.");
-        return;
-    }
-
-    if (typeof XLSX === 'undefined') {
-        alert("Excel export library is loading, please try again in a second.");
-        return;
-    }
-
-    const recordRows = [
-        ["STUDENT RECORD INFORMATION", ""],
-        ["Full Name", student.name || 'N/A'],
-        ["Student Number", student.studentNumber || 'N/A'],
-        ["Major", student.major || 'N/A'],
-        ["CPR", student.cpr || 'N/A'],
-        ["Gender", student.gender || 'N/A'],
-        ["Email", student.email || 'N/A'],
-        ["Added By", student.added_by || student.createdByName || 'N/A'],
-        ["CV Upload Status", student.cvUrl ? `Uploaded (${student.cvName || 'File'})` : 'No CV Uploaded'],
-        ["", ""],
-        ["ENROLLED COURSES", "ADDED DATE"]
-    ];
-
-    if (Array.isArray(student.courses) && student.courses.length > 0) {
-        student.courses.forEach(c => {
-            recordRows.push([c.name, c.addedAt || '']);
-        });
-    } else {
-        recordRows.push(["No courses enrolled", ""]);
-    }
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(recordRows);
-    XLSX.utils.book_append_sheet(wb, ws, "Student Details");
-
-    XLSX.writeFile(wb, `Student_${student.cpr || studentId}.xlsx`);
 }
 
 function renderStudentDirectory(list) {
@@ -609,31 +532,7 @@ function renderStudentDirectory(list) {
     if (!container) return;
     container.innerHTML = "";
 
-    const t = (typeof translations !== 'undefined' && translations[currentLang]) 
-        ? translations[currentLang] 
-        : {
-            lbl_no_students: "No student records found.",
-            btn_delete_course: "Delete Course",
-            lbl_no_courses: "No courses added yet.",
-            btn_view_cv: "📄 View / Download CV",
-            btn_delete_cv: "Delete CV",
-            lbl_no_cv: "No CV uploaded",
-            btn_download_excel: "Download Excel",
-            btn_delete_student: "Delete Student",
-            lbl_full_name: "Full Name:",
-            lbl_student_number: "Student Number:",
-            lbl_major: "Major:",
-            lbl_cpr: "CPR:",
-            lbl_gender: "Gender:",
-            opt_male: "Male",
-            opt_female: "Female",
-            lbl_email: "Email:",
-            lbl_cv_doc: "Student CV Document",
-            btn_upload_cv: "Upload CV",
-            lbl_enrolled_courses: "Enrolled Courses",
-            ph_course: "Enter course name",
-            btn_add_course: "+ Add Course"
-        };
+    const t = translations[currentLang] || translations.en;
 
     if (list.length === 0) {
         container.innerHTML = `<p style="text-align:center; color:#a0aec0; padding:20px;">${t.lbl_no_students}</p>`;
@@ -653,10 +552,7 @@ function renderStudentDirectory(list) {
                         <span style="color:#718096; margin-left:8px; font-size:0.80rem;">(${c.addedAt})</span>
                     </div>
                     <button type="button" onclick="removeCourse('${student.id}', ${index})" 
-                        style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px; transition: all 0.2s;" 
-                        onmouseover="this.style.background='#fee2e2'" 
-                        onmouseout="this.style.background='#fff5f5'"
-                    >
+                        style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px;">
                         ${t.btn_delete_course}
                     </button>
                 </li>
@@ -667,12 +563,9 @@ function renderStudentDirectory(list) {
 
         const cvDisplay = student.cvUrl 
             ? `<div style="display: flex; align-items: center; gap: 8px;">
-                <a href="${student.cvUrl}" download="${student.cvName || 'Student_CV'}" target="_blank" style="color:var(--accent-slate-blue, #2b6cb0); font-weight:600; text-decoration:underline; font-size:0.85rem;">${t.btn_view_cv}</a>
+                <a href="${student.cvUrl}" download="${student.cvName || 'Student_CV'}" target="_blank" style="color:#2b6cb0; font-weight:600; text-decoration:underline; font-size:0.85rem;">${t.btn_view_cv}</a>
                 <button type="button" onclick="deleteStudentCV('${student.id}')" 
-                    style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px; transition: all 0.2s;" 
-                    onmouseover="this.style.background='#fee2e2'" 
-                    onmouseout="this.style.background='#fff5f5'"
-                >
+                    style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px;">
                     ${t.btn_delete_cv}
                 </button>
                </div>`
@@ -681,11 +574,9 @@ function renderStudentDirectory(list) {
         item.innerHTML = `
             <div class="student-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
                 <span>${escapeHTML(student.name || 'Unnamed Student')} (${escapeHTML(student.cpr)})</span>
-                <svg class="arrow-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
             <div class="student-details hidden">
                 <div class="student-actions-wrapper" style="display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 12px;">
-                    <button class="nav-btn" onclick="downloadSingleStudentData('${student.id}')" style="background: #edf2f7; border: 1px solid #cbd5e0; color: #2d3748; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">${t.btn_download_excel}</button>
                     <button class="delete-icon-btn" onclick="deleteStudent('${student.id}')">${t.btn_delete_student}</button>
                 </div>
                 
@@ -693,49 +584,27 @@ function renderStudentDirectory(list) {
                     <label>${t.lbl_full_name} 
                         <input type="text" value="${escapeHTML(student.name || '')}" onchange="updateStudentField('${student.id}', 'name', this.value)">
                     </label>
-                    <label>${t.lbl_student_number || 'Student Number:'} 
-                        <input type="text" value="${escapeHTML(student.studentNumber || '')}" onchange="updateStudentField('${student.id}', 'studentNumber', this.value)">
-                    </label>
-                    <label>${t.lbl_major || 'Major:'} 
-                        <input type="text" value="${escapeHTML(student.major || '')}" onchange="updateStudentField('${student.id}', 'major', this.value)">
-                    </label>
                     <label>${t.lbl_cpr} 
                         <input type="text" value="${escapeHTML(student.cpr)}" readonly>
                     </label>
-                    <label>${t.lbl_gender} 
-                        <select onchange="updateStudentField('${student.id}', 'gender', this.value)">
-                            <option value="male" ${student.gender === 'male' ? 'selected' : ''}>${t.opt_male}</option>
-                            <option value="female" ${student.gender === 'female' ? 'selected' : ''}>${t.opt_female}</option>
-                        </select>
-                    </label>
-                    <label>${t.lbl_email} 
-                        <input type="email" value="${escapeHTML(student.email || '')}" onchange="updateStudentField('${student.id}', 'email', this.value)">
-                    </label>
                 </div>
 
-                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color, #e2e8f0);">
-
-                <div style="margin-bottom: 16px;">
-                    <h4 style="margin-bottom: 8px; color: var(--accent-slate-blue, #2b6cb0);">${t.lbl_cv_doc}</h4>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <input type="file" id="cv-input-${student.id}" accept=".pdf,.doc,.docx" style="font-size: 0.85rem;">
-                        <button type="button" class="primary-btn" onclick="uploadStudentCV('${student.id}')" style="padding: 6px 12px; font-size: 0.85rem;">${t.btn_upload_cv}</button>
-                        <div style="margin-left: auto;">${cvDisplay}</div>
+                <div style="margin-top: 16px;">
+                    <h4>${t.lbl_cv_doc}</h4>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="cv-input-${student.id}" accept=".pdf,.doc,.docx">
+                        <button type="button" class="primary-btn" onclick="uploadStudentCV('${student.id}')">${t.btn_upload_cv}</button>
+                        <div>${cvDisplay}</div>
                     </div>
                 </div>
 
-                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color, #e2e8f0);">
-
-                <div>
-                    <h4 style="margin-bottom: 8px; color: var(--accent-slate-blue, #2b6cb0);">${t.lbl_enrolled_courses}</h4>
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <input type="text" id="course-input-${student.id}" placeholder="${t.ph_course}" style="flex: 1; padding: 8px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 6px; font-size: 0.85rem;">
-                        <button type="button" class="primary-btn" onclick="addCourseToStudent('${student.id}')" style="padding: 6px 14px; font-size: 0.85rem;">${t.btn_add_course}</button>
+                <div style="margin-top: 16px;">
+                    <h4>${t.lbl_enrolled_courses}</h4>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="course-input-${student.id}" placeholder="${t.ph_course}">
+                        <button type="button" class="primary-btn" onclick="addCourseToStudent('${student.id}')">${t.btn_add_course}</button>
                     </div>
-                    
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        ${coursesHTML}
-                    </ul>
+                    <ul>${coursesHTML}</ul>
                 </div>
             </div>
         `;
@@ -761,61 +630,43 @@ async function addCourseToStudent(studentId) {
     if (!inputEl) return;
 
     const courseName = inputEl.value.trim();
-    if (!courseName) {
-        alert("Please enter a course name.");
-        return;
-    }
+    if (!courseName) return alert("Please enter a course name.");
 
     const now = new Date();
-    const formattedDateTime = now.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-    }) + ", " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const newCourseObj = {
-        name: courseName,
-        addedAt: formattedDateTime
-    };
+    const formattedDateTime = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ", " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
         const studentRef = db.collection('students').doc(studentId);
         const docSnap = await studentRef.get();
         if (!docSnap.exists) return;
 
-        const data = docSnap.data();
-        let currentCourses = Array.isArray(data.courses) ? data.courses : [];
-        currentCourses.push(newCourseObj);
+        let currentCourses = Array.isArray(docSnap.data().courses) ? docSnap.data().courses : [];
+        currentCourses.push({ name: courseName, addedAt: formattedDateTime });
 
         await studentRef.update({ courses: currentCourses });
         inputEl.value = "";
     } catch (err) {
         console.error("Error adding course:", err);
-        alert("Error adding course: " + err.message);
     }
 }
 
 async function removeCourse(studentId, courseIndex) {
     if (!confirm("Are you sure you want to delete this course?")) return;
-
     try {
         const studentRef = db.collection('students').doc(studentId);
         const docSnap = await studentRef.get();
-
         if (docSnap.exists) {
-            const data = docSnap.data();
-            let existingCourses = Array.isArray(data.courses) ? data.courses : [];
+            let existingCourses = Array.isArray(docSnap.data().courses) ? docSnap.data().courses : [];
             existingCourses.splice(courseIndex, 1);
             await studentRef.update({ courses: existingCourses });
         }
     } catch (err) {
         console.error("Error removing course:", err);
-        alert("Failed to delete course: " + err.message);
     }
 }
 
 // ==========================================
-// 7. CV UPLOAD & DELETE
+// 7. CV UPLOAD & DELETE (Firebase Storage)
 // ==========================================
 async function uploadStudentCV(studentId) {
     const fileInput = document.getElementById(`cv-input-${studentId}`);
@@ -825,30 +676,25 @@ async function uploadStudentCV(studentId) {
     }
 
     const file = fileInput.files[0];
-    if (file.size > 700 * 1024) {
-        alert("File size is too large! Please select a file under 700KB.");
-        return;
-    }
+    const storageRef = storage.ref(`cv_documents/${studentId}_${file.name}`);
 
-    const reader = new FileReader();
-    reader.onload = async function (e) {
-        try {
-            await db.collection('students').doc(studentId).update({
-                cvUrl: e.target.result,
-                cvName: file.name
-            });
-            alert("CV uploaded and saved successfully!");
-        } catch (err) {
-            console.error("Firestore CV update error:", err);
-            alert("Failed to save CV: " + err.message);
-        }
-    };
-    reader.readAsDataURL(file);
+    try {
+        const snapshot = await storageRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+
+        await db.collection('students').doc(studentId).update({
+            cvUrl: downloadURL,
+            cvName: file.name
+        });
+        alert("CV uploaded and saved successfully!");
+    } catch (err) {
+        console.error("CV Upload Error:", err);
+        alert("Failed to upload CV: " + err.message);
+    }
 }
 
 async function deleteStudentCV(studentId) {
     if (!confirm("Are you sure you want to delete this CV?")) return;
-
     try {
         await db.collection('students').doc(studentId).update({
             cvUrl: firebase.firestore.FieldValue.delete(),
@@ -857,171 +703,60 @@ async function deleteStudentCV(studentId) {
         alert("CV deleted successfully!");
     } catch (err) {
         console.error("Error deleting CV:", err);
-        alert("Failed to delete CV: " + err.message);
     }
 }
 
 // ==========================================
-// 8. REAL-TIME GROUP CHAT & EMOJI PICKER
+// 8. REAL-TIME GROUP CHAT & UTILITIES
 // ==========================================
 function listenToGroupChat() {
-    db.collection('chat_messages')
-      .orderBy('timestamp', 'asc')
-      .limitToLast(50)
-      .onSnapshot((snapshot) => {
-          const box = document.getElementById('chat-messages');
-          if (!box) return;
+    db.collection('chat_messages').orderBy('timestamp', 'asc').limitToLast(50).onSnapshot((snapshot) => {
+        const box = document.getElementById('chat-messages');
+        if (!box) return;
+        box.innerHTML = "";
 
-          box.innerHTML = "";
-
-          const currentUserId = currentUserData ? currentUserData.uid : null;
-          const currentName = currentUserData ? (currentUserData.displayName || currentUserData.email?.split('@')[0]) : null;
-
-          let unreadCount = 0;
-          const isChatHidden = document.getElementById('chat-window')?.classList.contains('hidden');
-
-          const savedLastRead = localStorage.getItem('lastReadChatTime');
-          const lastReadTime = savedLastRead ? new Date(savedLastRead) : pageLoadedAt;
-
-          snapshot.forEach(doc => {
-              const m = doc.data();
-              const div = document.createElement('div');
-              
-              const senderName = m.username || "Anonymous";
-              const textContent = m.message || "";
-              
-              const isMe = (m.uid && m.uid === currentUserId) || (senderName === currentName);
-
-              const msgDate = m.timestamp && typeof m.timestamp.toDate === 'function' 
-                  ? m.timestamp.toDate() 
-                  : new Date();
-
-              if (isChatHidden && !isMe && msgDate > lastReadTime) {
-                  unreadCount++;
-              }
-              
-              div.className = `chat-msg ${isMe ? 'my-msg' : 'other-msg'}`;
-              
-              let timeStr = "";
-              if (m.timestamp && typeof m.timestamp.toDate === 'function') {
-                  const now = new Date();
-                  const yesterday = new Date(now);
-                  yesterday.setDate(now.getDate() - 1);
-                  
-                  const isToday = msgDate.toDateString() === now.toDateString();
-                  const isYesterday = msgDate.toDateString() === yesterday.toDateString();
-                  
-                  const timeOnly = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                  if (isToday) {
-                      timeStr = timeOnly;
-                  } else if (isYesterday) {
-                      timeStr = `Yesterday ${timeOnly}`;
-                  } else {
-                      const dateOnly = msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                      timeStr = `${dateOnly}, ${timeOnly}`;
-                  }
-              } else {
-                  timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              }
-
-              div.innerHTML = `
-                  <div class="msg-header">
-                      <strong class="msg-sender">${escapeHTML(senderName)}</strong>
-                      <span class="msg-time">${timeStr}</span>
-                  </div>
-                  <div class="msg-body">${escapeHTML(textContent)}</div>
-              `;
-              box.appendChild(div);
-          });
-
-          const badgeEl = document.getElementById('chat-unread-badge');
-          if (badgeEl) {
-              if (unreadCount > 0) {
-                  badgeEl.innerText = unreadCount > 99 ? '99+' : unreadCount;
-                  badgeEl.classList.remove('hidden');
-              } else {
-                  badgeEl.classList.add('hidden');
-              }
-          }
-
-          box.scrollTop = box.scrollHeight;
-      }, (error) => {
-          console.error("Chat permission error:", error);
-      });
+        snapshot.forEach(doc => {
+            const m = doc.data();
+            const div = document.createElement('div');
+            const isMe = m.uid === (currentUserData ? currentUserData.uid : null);
+            div.className = `chat-msg ${isMe ? 'my-msg' : 'other-msg'}`;
+            div.innerHTML = `<strong class="msg-sender">${escapeHTML(m.username || "Anonymous")}</strong>: ${escapeHTML(m.message || "")}`;
+            box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+    });
 }
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
-    if (!input) return;
-
-    const message = input.value.trim();
-    if (!message) return;
+    if (!input || !input.value.trim()) return;
 
     const user = currentUserData || auth.currentUser;
-    if (!user) {
-        alert("Please sign in to send messages.");
-        return;
-    }
+    if (!user) return alert("Please sign in to send messages.");
 
     try {
-        const displayName = user.displayName 
-            || (user.email ? user.email.split('@')[0] : "User");
-
+        const messageText = input.value.trim();
         input.value = "";
-        document.getElementById('emoji-picker')?.classList.add('hidden');
-
         await db.collection('chat_messages').add({
             uid: user.uid,
-            username: displayName,
-            message: message,
+            username: user.displayName || user.email.split('@')[0],
+            message: messageText,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
     } catch (err) {
         console.error("Failed to send message:", err);
-        alert("Failed to send message: " + err.message);
-    }
-}
-
-function toggleEmojiPicker() {
-    const picker = document.getElementById('emoji-picker');
-    if (picker) {
-        picker.classList.toggle('hidden');
     }
 }
 
 function escapeHTML(str) {
-    if (!str) return "";
-    return String(str).replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
+    return String(str || "").replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// ==========================================
-// 9. NAVIGATION, MODALS & LIVE CLOCK
-// ==========================================
 function showView(id) {
-    document.querySelectorAll('.card-view').forEach(v => v.classList.add('hidden'));
-    document.getElementById(id)?.classList.remove('hidden');
-}
-
-function openAccountModal() { document.getElementById('account-modal')?.classList.remove('hidden'); }
-function closeAccountModal() { document.getElementById('account-modal')?.classList.add('hidden'); }
-
-function toggleChatWindow() { 
-    const chatWin = document.getElementById('chat-window');
-    if (!chatWin) return;
-
-    chatWin.classList.toggle('hidden');
-
-    if (!chatWin.classList.contains('hidden')) {
-        localStorage.setItem('lastReadChatTime', new Date().toISOString());
-
-        const badgeEl = document.getElementById('chat-unread-badge');
-        if (badgeEl) {
-            badgeEl.innerText = '0';
-            badgeEl.classList.add('hidden');
-        }
+    const target = document.getElementById(id);
+    if (target) {
+        document.querySelectorAll('.card-view').forEach(v => v.classList.add('hidden'));
+        target.classList.remove('hidden');
     }
 }
 
@@ -1035,17 +770,14 @@ function runLiveFooterClock() {
     }
 }
 
-// Attach functions explicitly to global window scope so HTML buttons can invoke them directly
-window.selectRole = selectRole;
+// Global scope window binding
 window.signInRoleWithGoogle = signInRoleWithGoogle;
 window.signInWithGoogle = signInWithGoogle;
 window.logoutUser = logoutUser;
 window.deleteAccount = deleteAccount;
 window.addStudentCPR = addStudentCPR;
-window.resetAndAddAnotherCPR = resetAndAddAnotherCPR;
 window.handleSearch = handleSearch;
 window.downloadAllStudentsData = downloadAllStudentsData;
-window.downloadSingleStudentData = downloadSingleStudentData;
 window.updateStudentField = updateStudentField;
 window.deleteStudent = deleteStudent;
 window.addCourseToStudent = addCourseToStudent;
@@ -1053,48 +785,10 @@ window.removeCourse = removeCourse;
 window.uploadStudentCV = uploadStudentCV;
 window.deleteStudentCV = deleteStudentCV;
 window.sendChatMessage = sendChatMessage;
-window.toggleEmojiPicker = toggleEmojiPicker;
-window.toggleChatWindow = toggleChatWindow;
-window.openAccountModal = openAccountModal;
-window.closeAccountModal = closeAccountModal;
 window.toggleLanguage = toggleLanguage;
 window.showView = showView;
 
 window.addEventListener('DOMContentLoaded', () => {
     runLiveFooterClock();
     applyLanguageTranslations();
-
-    // Emoji click setup
-    const emojiPicker = document.getElementById('emoji-picker');
-    const chatInput = document.getElementById('chat-input');
-    if (emojiPicker && chatInput) {
-        emojiPicker.querySelectorAll('span').forEach(emoji => {
-            emoji.addEventListener('click', () => {
-                chatInput.value += emoji.innerText;
-                chatInput.focus();
-                emojiPicker.classList.add('hidden');
-            });
-        });
-    }
-
-    // Keydown Listener: Enter to Send Chat Message
-    if (chatInput) {
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendChatMessage();
-            }
-        });
-    }
-
-    // Keydown Listener: Enter to Submit CPR
-    const cprInput = document.getElementById('cpr-input');
-    if (cprInput) {
-        cprInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addStudentCPR();
-            }
-        });
-    }
 });
