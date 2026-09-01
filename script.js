@@ -207,26 +207,30 @@ async function signInRoleWithGoogle(role) {
         const user = result.user;
         const userEmail = (user.email || "").toLowerCase();
 
-        // 1. Check Manager email authorization
-        if (role === 'manager' && userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
-            await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
+        // 1. Check Manager email authorization & Redirect
+        if (role === 'manager') {
+            if (userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
+                await auth.signOut();
+                alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
+                return;
+            }
+            sessionStorage.setItem("userRole", "Manager");
+            currentRole = "Manager";
+            window.location.href = "manager.html";
             return;
         }
 
-        // 2. Check Operator email authorization
-        if (role === 'operator' && userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
-            await auth.signOut();
-            alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
-            return;
-        }
-
-        const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
-        sessionStorage.setItem("userRole", formattedRole);
-        currentRole = formattedRole;
-
+        // 2. Check Operator email authorization & Redirect
         if (role === 'operator') {
+            if (userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+                await auth.signOut();
+                alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
+                return;
+            }
+            sessionStorage.setItem("userRole", "Operator");
+            currentRole = "Operator";
             window.location.href = "operator.html";
+            return;
         }
 
     } catch (error) {
@@ -262,6 +266,7 @@ async function signInWithGoogle() {
 
         sessionStorage.setItem("userRole", "Employee");
         currentRole = "Employee";
+        window.location.href = "employee.html";
     } catch (error) {
         console.error("Google Sign-In Error:", error);
         alert("Sign-In Failed: " + error.message);
