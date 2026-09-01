@@ -770,6 +770,46 @@ function runLiveFooterClock() {
     }
 }
 
+// ==========================================
+// 9. SAVE USER ACCOUNT DETAILS
+// ==========================================
+async function saveAccountDetails(event) {
+    if (event) event.preventDefault();
+
+    const user = auth.currentUser;
+    if (!user) {
+        alert("No active user session found.");
+        return;
+    }
+
+    // Capture values from form fields or existing UI elements
+    const updatedName = document.getElementById('acc-name')?.value.trim() || currentUserData.displayName;
+    const updatedPhone = document.getElementById('acc-phone')?.value.trim() || "";
+
+    try {
+        // Save/merge details into the 'users' Firestore collection
+        await db.collection("users").doc(user.uid).set({
+            name: updatedName,
+            phone: updatedPhone,
+            role: currentRole || "Operator",
+            email: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Update display elements in the modal interface
+        const nameEl = document.getElementById('modal-username');
+        if (nameEl) nameEl.innerText = updatedName;
+
+        alert(currentLang === 'ar' ? 'تم حفظ بيانات الحساب بنجاح!' : 'Account details saved successfully!');
+    } catch (error) {
+        console.error("Error saving account details:", error);
+        alert("Failed to save account details: " + error.message);
+    }
+}
+
+// Bind to window object for HTML access
+window.saveAccountDetails = saveAccountDetails;
+
 // Global scope window binding
 window.signInRoleWithGoogle = signInRoleWithGoogle;
 window.signInWithGoogle = signInWithGoogle;
