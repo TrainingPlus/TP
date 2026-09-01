@@ -4,8 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Operator Dashboard</title>
+
+  <!-- Firebase v8 SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
   <!-- XLSX Library for Excel Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
     :root {
         --bg-color: #f2f7f5;
@@ -46,16 +53,8 @@
         color: white;
     }
 
-    .nav-left {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .nav-controls {
-        display: flex;
-        gap: 8px;
-    }
+    .nav-left { display: flex; align-items: center; gap: 16px; }
+    .nav-controls { display: flex; gap: 8px; }
 
     .nav-btn {
         background-color: rgba(255, 255, 255, 0.2);
@@ -71,10 +70,7 @@
     .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
 
     /* Main Container & Cards */
-    main {
-        flex: 1;
-        width: 100%;
-    }
+    main { flex: 1; width: 100%; }
 
     .card-view {
         max-width: 800px;
@@ -90,12 +86,7 @@
     .view.active { display: block; }
 
     /* Forms & Inputs */
-    .standard-form {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
+    .standard-form { display: flex; flex-direction: column; gap: 16px; }
     .standard-form label, .grid-form label {
         display: flex;
         flex-direction: column;
@@ -150,7 +141,7 @@
         color: var(--text-primary);
     }
 
-    /* Grid Display for Courses & Classes */
+    /* Grid Display */
     .grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -196,10 +187,7 @@
         font-size: 0.88rem;
     }
 
-    th {
-        background-color: #f4f9f7;
-        font-weight: 600;
-    }
+    th { background-color: #f4f9f7; font-weight: 600; }
 
     /* RTL Adjustments */
     body[dir="rtl"] { direction: rtl; text-align: right; }
@@ -218,13 +206,13 @@
   <!-- Header -->
   <header class="top-nav">
     <div class="nav-left">
-      <h2 style="font-size: 1.25rem; font-weight: 600;">Operator Portal</h2>
+      <h2 id="txt-app-title" style="font-size: 1.25rem; font-weight: 600;">Operator Portal</h2>
     </div>
     <div class="nav-controls">
-      <button class="nav-btn" onclick="showView('home-view')">Home</button>
-      <button class="nav-btn" onclick="showView('courses-view')">Courses</button>
-      <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR/EN</button>
-      <button class="nav-btn" onclick="showView('account-view')">Account</button>
+      <button class="nav-btn" onclick="showView('home-view')" id="nav-home">Home</button>
+      <button class="nav-btn" onclick="showView('courses-view')" id="nav-courses">Courses</button>
+      <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR / EN</button>
+      <button class="nav-btn" onclick="showView('account-view')" id="nav-account">Account</button>
     </div>
   </header>
 
@@ -232,68 +220,68 @@
   <main>
     <!-- Home View: Add Course -->
     <section id="home-view" class="card-view view active">
-      <h3 style="margin-bottom: 16px;">Add New Course</h3>
+      <h3 id="txt-add-course-title" style="margin-bottom: 16px;">Add New Course</h3>
       <form id="add-course-form" class="standard-form" onsubmit="addCourse(event)">
-        <label for="course-name">
+        <label id="lbl-course-name" for="course-name">
           Course Name
           <input type="text" id="course-name" required placeholder="e.g., Web Development">
         </label>
         <div>
-          <button type="submit" class="primary-btn">Add Course</button>
+          <button type="submit" class="primary-btn" id="btn-add-course">Add Course</button>
         </div>
       </form>
     </section>
 
     <!-- Courses View -->
     <section id="courses-view" class="card-view view">
-      <h3 style="margin-bottom: 16px;">Available Courses</h3>
+      <h3 id="txt-available-courses" style="margin-bottom: 16px;">Available Courses</h3>
       <div id="courses-list" class="grid"></div>
     </section>
 
     <!-- Account View -->
     <section id="account-view" class="card-view view">
-      <h3 style="margin-bottom: 16px;">Account Settings</h3>
+      <h3 id="txt-account-settings" style="margin-bottom: 16px;">Account Settings</h3>
       <form id="account-form" class="standard-form" onsubmit="saveAccountDetails(event)">
-        <label for="acc-email">
+        <label id="lbl-acc-email" for="acc-email">
           Signed-In Email (Default / Locked)
           <input type="email" id="acc-email" disabled>
         </label>
-        <label for="acc-name">
+        <label id="lbl-acc-name" for="acc-name">
           Operator Name
           <input type="text" id="acc-name" placeholder="Enter your full name" required>
         </label>
-        <label for="acc-phone">
+        <label id="lbl-acc-phone" for="acc-phone">
           Phone Number
           <input type="text" id="acc-phone" placeholder="Enter your phone number">
         </label>
-        <label for="acc-role">
+        <label id="lbl-acc-role" for="acc-role">
           Role / Department
           <select id="acc-role">
-            <option value="System Administrator">System Administrator</option>
-            <option value="Operator">Operator</option>
-            <option value="Course Coordinator">Course Coordinator</option>
+            <option value="System Administrator" id="opt-role-admin">System Administrator</option>
+            <option value="Operator" id="opt-role-op">Operator</option>
+            <option value="Course Coordinator" id="opt-role-coord">Course Coordinator</option>
           </select>
         </label>
         <div>
-          <button type="submit" class="primary-btn">Save Changes</button>
+          <button type="submit" class="primary-btn" id="btn-save-acc">Save Changes</button>
         </div>
       </form>
     </section>
 
     <!-- Classes View -->
     <section id="classes-view" class="card-view view">
-      <button class="secondary-btn" onclick="showView('courses-view')" style="margin-bottom: 1rem;">&larr; Back to Courses</button>
+      <button class="secondary-btn" onclick="showView('courses-view')" id="btn-back-courses" style="margin-bottom: 1rem;">&larr; Back to Courses</button>
       <h3 id="current-course-title" style="margin-bottom: 16px;">Classes</h3>
       
       <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 16px;">
-        <h4 style="margin-bottom: 12px;">Add New Class</h4>
+        <h4 id="txt-add-class-title" style="margin-bottom: 12px;">Add New Class</h4>
         <form id="add-class-form" class="standard-form" onsubmit="addClass(event)">
-          <label for="class-name">
+          <label id="lbl-class-name" for="class-name">
             Class Name / Code
             <input type="text" id="class-name" required placeholder="e.g., Class A - Morning">
           </label>
           <div>
-            <button type="submit" class="primary-btn">Add Class</button>
+            <button type="submit" class="primary-btn" id="btn-add-class">Add Class</button>
           </div>
         </form>
       </div>
@@ -303,38 +291,38 @@
 
     <!-- Class Detail View (Students Table) -->
     <section id="students-view" class="card-view view">
-      <button class="secondary-btn" onclick="showView('classes-view')" style="margin-bottom: 1rem;">&larr; Back to Classes</button>
+      <button class="secondary-btn" onclick="showView('classes-view')" id="btn-back-classes" style="margin-bottom: 1rem;">&larr; Back to Classes</button>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 id="current-class-title" style="margin: 0;">Student Records</h3>
-        <button onclick="exportToExcel()" class="primary-btn">Download Excel</button>
+        <button onclick="exportToExcel()" class="primary-btn" id="btn-export-excel">Download Excel</button>
       </div>
 
       <!-- Add Student Form -->
       <div style="background: #f8faf9; padding: 16px; border-radius: 12px; border: 1px solid #e1ebe6; margin-bottom: 20px;">
-        <h4 style="margin-bottom: 12px;">Add Student Record</h4>
+        <h4 id="txt-add-std-title" style="margin-bottom: 12px;">Add Student Record</h4>
         <form id="add-student-form" class="grid-form" onsubmit="addStudent(event)">
-          <label>
+          <label id="lbl-std-name">
             Student Name
             <input type="text" id="std-name" required>
           </label>
-          <label>
+          <label id="lbl-std-cpr">
             Student CPR
-            <input type="text" id="std-cpr" required>
+            <input type="text" id="std-cpr" maxlength="9" placeholder="9-digit CPR" required>
           </label>
-          <label>
+          <label id="lbl-std-status">
             Tamkeen Status
             <select id="std-status">
-              <option value="Accepted">Accepted</option>
-              <option value="Under Processing">Under Processing</option>
-              <option value="Withdrawn">Withdrawn</option>
+              <option value="Accepted" id="opt-st-acc">Accepted</option>
+              <option value="Under Processing" id="opt-st-proc">Under Processing</option>
+              <option value="Withdrawn" id="opt-st-with">Withdrawn</option>
             </select>
           </label>
-          <label>
+          <label id="lbl-std-comment">
             Comment
             <input type="text" id="std-comment">
           </label>
           <div style="grid-column: 1 / -1; display: flex; align-items: flex-end;">
-            <button type="submit" class="primary-btn">Add Student</button>
+            <button type="submit" class="primary-btn" id="btn-add-student">Add Student</button>
           </div>
         </form>
       </div>
@@ -343,10 +331,10 @@
       <table id="students-table">
         <thead>
           <tr>
-            <th>Student Name</th>
-            <th>Student CPR</th>
-            <th>Tamkeen Status</th>
-            <th>Comment</th>
+            <th id="th-std-name">Student Name</th>
+            <th id="th-std-cpr">Student CPR</th>
+            <th id="th-std-status">Tamkeen Status</th>
+            <th id="th-std-comment">Comment</th>
           </tr>
         </thead>
         <tbody id="students-table-body">
@@ -358,13 +346,13 @@
 
   <!-- Footer -->
   <footer class="bottom-footer">
-    <span id="datetime">Loading time...</span>
+    <span id="datetime">Loading date & time...</span>
   </footer>
 
   <script>
     // State Data Structure
     let state = {
-      userEmail: "operator@institute.com", // Default signed-in email
+      userEmail: "operator@institute.com",
       accountDetails: {
         name: "Admin Operator",
         phone: "+973 36000000",
@@ -376,40 +364,167 @@
       currentLang: 'EN'
     };
 
-    // Initialize Account Page Data
+    // Dictionary for Language Translation
+    const translations = {
+      EN: {
+        appTitle: "Operator Portal",
+        navHome: "Home",
+        navCourses: "Courses",
+        navAccount: "Account",
+        addCourseTitle: "Add New Course",
+        lblCourseName: "Course Name",
+        btnAddCourse: "Add Course",
+        availableCourses: "Available Courses",
+        accountSettings: "Account Settings",
+        lblAccEmail: "Signed-In Email (Default / Locked)",
+        lblAccName: "Operator Name",
+        lblAccPhone: "Phone Number",
+        lblAccRole: "Role / Department",
+        optAdmin: "System Administrator",
+        optOperator: "Operator",
+        optCoord: "Course Coordinator",
+        btnSaveAcc: "Save Changes",
+        btnBackCourses: "← Back to Courses",
+        txtClasses: "Classes",
+        addClassTitle: "Add New Class",
+        lblClassName: "Class Name / Code",
+        btnAddClass: "Add Class",
+        btnBackClasses: "← Back to Classes",
+        txtStdRecords: "Student Records",
+        btnExportExcel: "Download Excel",
+        addStdTitle: "Add Student Record",
+        lblStdName: "Student Name",
+        lblStdCpr: "Student CPR",
+        lblStdStatus: "Tamkeen Status",
+        lblStdComment: "Comment",
+        optAccepted: "Accepted",
+        optProcessing: "Under Processing",
+        optWithdrawn: "Withdrawn",
+        btnAddStudent: "Add Student",
+        thName: "Student Name",
+        thCpr: "Student CPR",
+        thStatus: "Tamkeen Status",
+        thComment: "Comment"
+      },
+      AR: {
+        appTitle: "بوابة المشغل",
+        navHome: "الرئيسية",
+        navCourses: "الدورات",
+        navAccount: "الحساب",
+        addCourseTitle: "إضافة دورة جديدة",
+        lblCourseName: "اسم الدورة",
+        btnAddCourse: "إضافة دورة",
+        availableCourses: "الدورات المتاحة",
+        accountSettings: "إعدادات الحساب",
+        lblAccEmail: "البريد الإلكتروني المسجل (مغلق)",
+        lblAccName: "اسم المشغل",
+        lblAccPhone: "رقم الهاتف",
+        lblAccRole: "الدور / القسم",
+        optAdmin: "مدير النظام",
+        optOperator: "مشغل",
+        optCoord: "منسق دورات",
+        btnSaveAcc: "حفظ التغييرات",
+        btnBackCourses: "الرجوع إلى الدورات →",
+        txtClasses: "الفصول الدراسية",
+        addClassTitle: "إضافة فصل جديد",
+        lblClassName: "اسم / رمز الفصل",
+        btnAddClass: "إضافة فصل",
+        btnBackClasses: "الرجوع إلى الفصول →",
+        txtStdRecords: "سجلات الطلاب",
+        btnExportExcel: "تنزيل ملف إكسل",
+        addStdTitle: "إضافة سجل طالب",
+        lblStdName: "اسم الطالب",
+        lblStdCpr: "الرقم الشخصي (CPR)",
+        lblStdStatus: "حالة تمكين",
+        lblStdComment: "ملاحظات",
+        optAccepted: "مقبول",
+        optProcessing: "قيد المعالجة",
+        optWithdrawn: "منسحب",
+        btnAddStudent: "إضافة طالب",
+        thName: "اسم الطالب",
+        thCpr: "الرقم الشخصي (CPR)",
+        thStatus: "حالة تمكين",
+        thComment: "ملاحظات"
+      }
+    };
+
     function initAccountDetails() {
-      // Set fixed signed-in email
       document.getElementById('acc-email').value = state.userEmail;
-      
-      // Set editable defaults
       document.getElementById('acc-name').value = state.accountDetails.name;
       document.getElementById('acc-phone').value = state.accountDetails.phone;
       document.getElementById('acc-role').value = state.accountDetails.role;
     }
 
-    // Navigation Handler
     function showView(viewId) {
       document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
       document.getElementById(viewId).classList.add('active');
     }
 
-    // Language Toggle
     function toggleLanguage() {
       state.currentLang = state.currentLang === 'EN' ? 'AR' : 'EN';
-      document.getElementById('lang-btn').innerText = state.currentLang === 'EN' ? 'AR/EN' : 'EN/AR';
-      document.body.dir = state.currentLang === 'AR' ? 'rtl' : 'ltr';
+      const lang = state.currentLang;
+      const dict = translations[lang];
+
+      document.body.dir = lang === 'AR' ? 'rtl' : 'ltr';
+
+      // Update UI Text Elements
+      document.getElementById('txt-app-title').innerText = dict.appTitle;
+      document.getElementById('nav-home').innerText = dict.navHome;
+      document.getElementById('nav-courses').innerText = dict.navCourses;
+      document.getElementById('nav-account').innerText = dict.navAccount;
+      document.getElementById('txt-add-course-title').innerText = dict.addCourseTitle;
+      
+      // Form labels
+      document.getElementById('lbl-course-name').childNodes[0].nodeValue = dict.lblCourseName + " ";
+      document.getElementById('btn-add-course').innerText = dict.btnAddCourse;
+      document.getElementById('txt-available-courses').innerText = dict.availableCourses;
+      document.getElementById('txt-account-settings').innerText = dict.accountSettings;
+
+      document.getElementById('lbl-acc-email').childNodes[0].nodeValue = dict.lblAccEmail + " ";
+      document.getElementById('lbl-acc-name').childNodes[0].nodeValue = dict.lblAccName + " ";
+      document.getElementById('lbl-acc-phone').childNodes[0].nodeValue = dict.lblAccPhone + " ";
+      document.getElementById('lbl-acc-role').childNodes[0].nodeValue = dict.lblAccRole + " ";
+      
+      document.getElementById('opt-role-admin').innerText = dict.optAdmin;
+      document.getElementById('opt-role-op').innerText = dict.optOperator;
+      document.getElementById('opt-role-coord').innerText = dict.optCoord;
+      document.getElementById('btn-save-acc').innerText = dict.btnSaveAcc;
+
+      document.getElementById('btn-back-courses').innerText = dict.btnBackCourses;
+      document.getElementById('txt-add-class-title').innerText = dict.addClassTitle;
+      document.getElementById('lbl-class-name').childNodes[0].nodeValue = dict.lblClassName + " ";
+      document.getElementById('btn-add-class').innerText = dict.btnAddClass;
+
+      document.getElementById('btn-back-classes').innerText = dict.btnBackClasses;
+      document.getElementById('btn-export-excel').innerText = dict.btnExportExcel;
+      document.getElementById('txt-add-std-title').innerText = dict.addStdTitle;
+
+      document.getElementById('lbl-std-name').childNodes[0].nodeValue = dict.lblStdName + " ";
+      document.getElementById('lbl-std-cpr').childNodes[0].nodeValue = dict.lblStdCpr + " ";
+      document.getElementById('lbl-std-status').childNodes[0].nodeValue = dict.lblStdStatus + " ";
+      document.getElementById('lbl-std-comment').childNodes[0].nodeValue = dict.lblStdComment + " ";
+
+      document.getElementById('opt-st-acc').innerText = dict.optAccepted;
+      document.getElementById('opt-st-proc').innerText = dict.optProcessing;
+      document.getElementById('opt-st-with').innerText = dict.optWithdrawn;
+      document.getElementById('btn-add-student').innerText = dict.btnAddStudent;
+
+      document.getElementById('th-std-name').innerText = dict.thName;
+      document.getElementById('th-std-cpr').innerText = dict.thCpr;
+      document.getElementById('th-std-status').innerText = dict.thStatus;
+      document.getElementById('th-std-comment').innerText = dict.thComment;
+
+      updateDateTime();
     }
 
-    // Account Form Save
     function saveAccountDetails(e) {
       e.preventDefault();
       state.accountDetails.name = document.getElementById('acc-name').value;
       state.accountDetails.phone = document.getElementById('acc-phone').value;
       state.accountDetails.role = document.getElementById('acc-role').value;
-      alert('Account details updated successfully!');
+      alert(state.currentLang === 'AR' ? 'تم تحديث البيانات بنجاح!' : 'Account details updated successfully!');
     }
 
-    // Add Course
     function addCourse(e) {
       e.preventDefault();
       const input = document.getElementById('course-name');
@@ -419,7 +534,6 @@
       showView('courses-view');
     }
 
-    // Render Courses List
     function renderCourses() {
       const container = document.getElementById('courses-list');
       container.innerHTML = '';
@@ -432,15 +546,14 @@
       });
     }
 
-    // Open Specific Course
     function openCourse(index) {
       state.selectedCourseIndex = index;
-      document.getElementById('current-course-title').innerText = `Classes for ${state.courses[index].name}`;
+      const prefix = state.currentLang === 'AR' ? 'الفصول لـ ' : 'Classes for ';
+      document.getElementById('current-course-title').innerText = `${prefix}${state.courses[index].name}`;
       renderClasses();
       showView('classes-view');
     }
 
-    // Add Class
     function addClass(e) {
       e.preventDefault();
       const input = document.getElementById('class-name');
@@ -449,7 +562,6 @@
       renderClasses();
     }
 
-    // Render Classes List
     function renderClasses() {
       const container = document.getElementById('classes-list');
       container.innerHTML = '';
@@ -463,16 +575,15 @@
       });
     }
 
-    // Open Specific Class
     function openClass(index) {
       state.selectedClassIndex = index;
       const cls = state.courses[state.selectedCourseIndex].classes[index];
-      document.getElementById('current-class-title').innerText = `Students - ${cls.name}`;
+      const prefix = state.currentLang === 'AR' ? 'الطلاب - ' : 'Students - ';
+      document.getElementById('current-class-title').innerText = `${prefix}${cls.name}`;
       renderStudents();
       showView('students-view');
     }
 
-    // Add Student
     function addStudent(e) {
       e.preventDefault();
       const name = document.getElementById('std-name').value;
@@ -488,7 +599,6 @@
       renderStudents();
     }
 
-    // Render Students Table
     function renderStudents() {
       const tbody = document.getElementById('students-table-body');
       tbody.innerHTML = '';
@@ -506,24 +616,32 @@
       });
     }
 
-    // Export Table to Excel
     function exportToExcel() {
       const table = document.getElementById('students-table');
       const workbook = XLSX.utils.table_to_book(table, { sheet: "Students" });
       XLSX.writeFile(workbook, "student_records.xlsx");
     }
 
-    // Footer Live Date & Time
+    // Displays full Date (Gregorian & Hijri) with Time in Footer
     function updateDateTime() {
       const now = new Date();
-      document.getElementById('datetime').innerText = now.toLocaleString();
+      const locale = state.currentLang === 'AR' ? 'ar-BH' : 'en-US';
+
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+      const gregorianDate = now.toLocaleDateString(locale, dateOptions);
+      const timeString = now.toLocaleTimeString(locale, timeOptions);
+
+      // Formatted Hijri date string
+      const hijriDate = new Intl.DateTimeFormat(locale + '-u-ca-islamic', dateOptions).format(now);
+
+      document.getElementById('datetime').innerText = `${gregorianDate} | ${hijriDate} | ${timeString}`;
     }
 
-    // Initialize Page
     initAccountDetails();
     setInterval(updateDateTime, 1000);
     updateDateTime();
   </script>
-  <script src="script.js"></script>
 </body>
 </html>
