@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 
 // Designated single-account email addresses
-const ALLOWED_MANAGER_EMAIL = "manager@gmail.com";  
+const ALLOWED_MANAGER_EMAIL = "madasaleh.188@gmail.com";  
 const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com";
 
 let currentUserData = null;
