@@ -1,4 +1,6 @@
-// Firebase Configuration
+// ==========================================
+// 1. FIREBASE CONFIGURATION & AUTHORIZATION
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyCzTs_zw28wkHij4Jj9-EEW3XOpQ5si2yc",
     authDomain: "training-plus-212a2.firebaseapp.com",
@@ -12,204 +14,821 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
-document.addEventListener('DOMContentLoaded', () => {
-    initClock();
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            fetchStudentsDirectory();
-            loadManagerApprovals();
-        }
-    });
-});
+// Designated single-account email addresses
+const ALLOWED_MANAGER_EMAIL = "madasaleh.188@gmail.com";  
+const ALLOWED_OPERATOR_EMAIL = "madasaleh.188@gmail.com";
 
-// Live Footer Clock
-function initClock() {
-    const el = document.getElementById('live-footer-datetime');
-    setInterval(() => {
-        if (el) el.textContent = new Date().toLocaleString();
-    }, 1000);
-}
+let currentUserData = null;
+let currentRole = null;
+let selectedRoleChoice = null;
+let studentList = [];
+let currentLang = 'en';
+const pageLoadedAt = new Date();
+
+// Reference doc for global single-session locks
+const sessionLockDoc = db.collection("system_status").doc("active_sessions");
+
+// ==========================================
+// 2. LANGUAGE TRANSLATIONS (ENGLISH / ARABIC)
+// ==========================================
+const translations = {
+    en: {
+        search_placeholder: "Search by name or CPR...",
+        download_all: "Download All (Excel)",
+        account: "Account",
+        logout: "Logout",
+        welcome_title: "Welcome",
+        welcome_subtitle: "Select your role to sign in to the Student Directory",
+        btn_google: "Sign in with Google",
+        student_directory: "Student Directory",
+        add_new_cpr: "+ Add New CPR",
+        register_cpr: "Register New CPR",
+        register_cpr_subtitle: "Enter a 9-digit CPR number to add a student.",
+        cpr_label: "CPR Number (9 Digits):",
+        btn_submit: "Submit Record",
+        btn_back: "Done / Back",
+        cpr_success_title: "CPR Added Successfully!",
+        cpr_success_subtitle: "Would you like to add another student CPR record?",
+        btn_add_another: "+ Add Another CPR",
+        btn_go_directory: "Go to Directory",
+        modal_account_title: "User Account",
+        lbl_user_id: "User ID:",
+        lbl_username: "Username:",
+        lbl_email: "Email:",
+        chat_header: "Team Group Chat",
+        chat_placeholder: "Type a message...",
+        btn_send: "Send",
+        btn_download_excel: "Download Excel",
+        btn_delete_student: "Delete Student",
+        lbl_full_name: "Full Name:",
+        lbl_cpr: "CPR:",
+        lbl_gender: "Gender:",
+        opt_male: "Male",
+        opt_female: "Female",
+        lbl_cv_doc: "Student CV Document",
+        btn_upload_cv: "Upload CV",
+        btn_view_cv: "📄 View / Download CV",
+        btn_delete_cv: "Delete CV",
+        lbl_no_cv: "No CV uploaded",
+        lbl_enrolled_courses: "Enrolled Courses",
+        ph_course: "Enter course name (e.g. Web Development)",
+        btn_add_course: "+ Add Course",
+        btn_delete_course: "Delete Course",
+        lbl_no_courses: "No courses added yet.",
+        lbl_no_students: "No student records found.",
+        lbl_student_number: "Student Number:",
+        lbl_major: "Major:"
+    },
+    ar: {
+        search_placeholder: "البحث بالاسم أو الرقم الشخصي...",
+        download_all: "تحميل الكل (إكسل)",
+        account: "الحساب",
+        logout: "تسجيل الخروج",
+        welcome_title: "مرحباً بك",
+        welcome_subtitle: "اختر دورك لتسجيل الدخول إلى دليل الطلاب",
+        btn_google: "تسجيل الدخول باستخدام جوجل",
+        student_directory: "دليل الطلاب",
+        add_new_cpr: "+ إضافة رقم شخصي جديد",
+        register_cpr: "تسجيل رقم شخصي جديد",
+        register_cpr_subtitle: "أدخل الرقم الشخصي المكون من 9 أرقام لإضافة طالب.",
+        cpr_label: "الرقم الشخصي (9 أرقام):",
+        btn_submit: "إرسال السجل",
+        btn_back: "تم / العودة",
+        cpr_success_title: "تمت إضافة الرقم الشخصي بنجاح!",
+        cpr_success_subtitle: "هل ترغب في إضافة سجل طالب آخر؟",
+        btn_add_another: "+ إضافة رقم شخصي آخر",
+        btn_go_directory: "الانتقال إلى الدليل",
+        modal_account_title: "حساب المستخدم",
+        lbl_user_id: "معرف المستخدم:",
+        lbl_username: "اسم المستخدم:",
+        lbl_email: "البريد الإلكتروني:",
+        chat_header: "محادثة الفريق الجماعية",
+        chat_placeholder: "اكتب رسالة...",
+        btn_send: "إرسال",
+        btn_download_excel: "تحميل إكسل",
+        btn_delete_student: "حذف الطالب",
+        lbl_full_name: "الاسم الكامل:",
+        lbl_cpr: "الرقم الشخصي:",
+        lbl_gender: "الجنس:",
+        opt_male: "ذكر",
+        opt_female: "أنثى",
+        lbl_cv_doc: "مستند السيرة الذاتية للطالب",
+        btn_upload_cv: "رفع السيرة الذاتية",
+        btn_view_cv: "📄 عرض / تحميل السيرة الذاتية",
+        btn_delete_cv: "حذف السيرة الذاتية",
+        lbl_no_cv: "لم يتم رفع سيرة ذاتية",
+        lbl_enrolled_courses: "الدورات المسجلة",
+        ph_course: "أدخل اسم الدورة (مثال: تطوير الويب)",
+        btn_add_course: "+ إضافة دورة",
+        btn_delete_course: "حذف الدورة",
+        lbl_no_courses: "لم يتم إضافة دورات بعد.",
+        lbl_no_students: "لم يتم العثور على سجلات للطلاب.",
+        lbl_student_number: "الرقم الجامعي:",
+        lbl_major: "التخصص:"
+    }
+};
 
 function toggleLanguage() {
-    alert("Language toggled between AR / EN");
+    currentLang = (currentLang === 'en') ? 'ar' : 'en';
+    document.documentElement.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
+    applyLanguageTranslations();
+    renderStudentDirectory(studentList);
 }
 
-// Live Search Filter Across Tables
-function handleSearch() {
-    const q = document.getElementById('search-input').value.toLowerCase();
-    document.querySelectorAll('tbody tr').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+function applyLanguageTranslations() {
+    const langObj = translations[currentLang];
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (langObj && langObj[key]) el.innerText = langObj[key];
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (langObj && langObj[key]) el.placeholder = langObj[key];
     });
 }
 
-// 1. Dual CPR / Phone Number Student Creation
-async function addStudentWithCprOrPhone() {
-    const name = document.getElementById('std-name').value.trim();
-    const cprOrPhone = document.getElementById('cpr-input').value.trim();
-    const status = document.getElementById('std-status').value;
-    const comment = document.getElementById('std-comment').value.trim();
+// Monitor Auth State
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUserData = user;
+        currentRole = sessionStorage.getItem("userRole") || "Operator";
+        updateUserUI(true);
+        listenToStudentDirectory();
+        listenToGroupChat();
+    } else {
+        currentUserData = null;
+        currentRole = null;
+        updateUserUI(false);
+    }
+});
 
-    if (!name || !/^\d{8,9}$/.test(cprOrPhone)) {
-        alert("Please enter a valid name and a 9-digit CPR or phone number.");
+// ==========================================
+// 3. ROLE SELECTION & AUTHENTICATION
+// ==========================================
+
+function selectRole(role) {
+    selectedRoleChoice = role;
+
+    ['manager', 'operator', 'employee'].forEach(r => {
+        const btn = document.getElementById(`role-btn-${r}`);
+        const form = document.getElementById(`form-${r}`);
+        if (btn) {
+            btn.style.background = '#f8fafc';
+            btn.style.color = '#334155';
+            btn.style.borderColor = '#cbd5e1';
+        }
+        if (form) form.classList.add('hidden');
+    });
+
+    const activeBtn = document.getElementById(`role-btn-${role}`);
+    if (activeBtn) {
+        activeBtn.style.background = '#2b6cb0';
+        activeBtn.style.color = '#ffffff';
+        activeBtn.style.borderColor = '#2b6cb0';
+    }
+
+    document.getElementById('role-prompt')?.classList.add('hidden');
+    document.getElementById(`form-${role}`)?.classList.remove('hidden');
+}
+
+async function signInRoleWithGoogle(role) {
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const userEmail = (user.email || "").toLowerCase();
+
+        if (role === 'manager') {
+            if (userEmail !== ALLOWED_MANAGER_EMAIL.toLowerCase()) {
+                await auth.signOut();
+                alert(`Access Denied: Only ${ALLOWED_MANAGER_EMAIL} is authorized to sign in as Manager.`);
+                return;
+            }
+            sessionStorage.setItem("userRole", "Manager");
+            currentRole = "Manager";
+            if (!window.location.pathname.includes("manager.html")) {
+                window.location.href = "manager.html";
+            }
+            return;
+        }
+
+        if (role === 'operator') {
+            if (userEmail !== ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+                await auth.signOut();
+                alert(`Access Denied: Only ${ALLOWED_OPERATOR_EMAIL} is authorized to sign in as Operator.`);
+                return;
+            }
+            sessionStorage.setItem("userRole", "Operator");
+            currentRole = "Operator";
+            if (!window.location.pathname.includes("operator.html")) {
+                window.location.href = "operator.html";
+            }
+            return;
+        }
+
+    } catch (error) {
+        console.error(`${role} Google Login Error:`, error);
+        alert(`Sign-In Failed: ${error.message}`);
+    }
+}
+
+async function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const userEmail = (user.email || "").toLowerCase();
+
+        if (userEmail === ALLOWED_OPERATOR_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            sessionStorage.removeItem("userRole");
+            alert("This email is registered as an Operator. Please select the Operator role to sign in.");
+            return;
+        }
+
+        if (userEmail === ALLOWED_MANAGER_EMAIL.toLowerCase()) {
+            await auth.signOut();
+            sessionStorage.removeItem("userRole");
+            alert("This email is registered as a Manager. Please select the Manager role to sign in.");
+            return;
+        }
+
+        sessionStorage.setItem("userRole", "Employee");
+        currentRole = "Employee";
+        if (!window.location.pathname.includes("employee.html")) {
+            window.location.href = "employee.html";
+        }
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        alert("Sign-In Failed: " + error.message);
+    }
+}
+
+function updateUserUI(isLoggedIn) {
+    document.getElementById('search-box')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('download-all-btn')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('account-btn')?.classList.toggle('hidden', !isLoggedIn);
+    document.getElementById('logout-btn')?.classList.toggle('hidden', !isLoggedIn);
+
+    if (isLoggedIn && currentUserData) {
+        const idEl = document.getElementById('modal-userid');
+        const nameEl = document.getElementById('modal-username');
+        const emailEl = document.getElementById('modal-email');
+        const roleEl = document.getElementById('modal-role');
+
+        const simpleUserId = currentUserData.uid 
+            ? `#USR-${currentUserData.uid.substring(0, 6).toUpperCase()}`
+            : '#10001';
+
+        if (idEl) idEl.innerText = simpleUserId;
+        if (nameEl) nameEl.innerText = currentUserData.displayName || currentUserData.email?.split('@')[0] || "User";
+        if (emailEl) emailEl.innerText = currentUserData.email || '';
+        if (roleEl) roleEl.innerText = currentRole || 'Operator';
+
+        // Safely check if home view exists in single-page mode
+        if (document.getElementById('view-home')) {
+            showView('view-home');
+        }
+    } else {
+        if (document.getElementById('view-auth')) {
+            showView('view-auth');
+        }
+    }
+}
+
+async function logoutUser() {
+    const normalizedRole = (currentRole || "").toLowerCase();
+    
+    if (normalizedRole === "manager" || normalizedRole === "operator") {
+        const lockKey = normalizedRole === 'manager' ? 'active_manager' : 'active_operator';
+        try {
+            await sessionLockDoc.set({ [lockKey]: null }, { merge: true });
+        } catch (e) {
+            console.error("Error clearing session lock:", e);
+        }
+    }
+    
+    sessionStorage.removeItem("userRole");
+    await auth.signOut();
+    window.location.href = "index.html";
+}
+
+async function deleteAccount() {
+    const user = auth.currentUser;
+    if (!user) {
+        alert("No active user session found.");
         return;
     }
 
-    const currentUser = auth.currentUser;
-    const employeeUsername = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : "Employee";
+    const warningMessage = "WARNING: Are you sure you want to delete your account?\n\n" +
+        "This action is permanent and CANNOT be undone.";
 
-    await db.collection("students").doc(cprOrPhone).set({
-        name: name,
-        cprOrPhone: cprOrPhone,
-        tamkeenStatus: status,
-        comment: comment,
-        addedByEmployee: employeeUsername,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    if (!confirm(warningMessage)) return;
 
-    alert("Student record saved successfully.");
-    fetchStudentsDirectory();
+    const confirmName = prompt(`Type "DELETE" to permanently remove your account (${user.email}):`);
+    if (confirmName !== "DELETE") {
+        alert("Account deletion cancelled.");
+        return;
+    }
+
+    try {
+        const userUid = user.uid;
+        await db.collection("users").doc(userUid).delete().catch(() => {});
+
+        const role = (sessionStorage.getItem("userRole") || "").toLowerCase();
+        if (role === "operator" || role === "manager") {
+            const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+            await sessionLockDoc.set({ [lockKey]: null }, { merge: true }).catch(() => {});
+        }
+
+        sessionStorage.clear();
+        await user.delete();
+
+        alert("Your account has been permanently deleted.");
+        window.location.href = "index.html";
+
+    } catch (error) {
+        console.error("Error deleting account:", error);
+        if (error.code === 'auth/requires-recent-login') {
+            alert("Security Notice: Please log out, sign in again, and retry deleting your account.");
+            await auth.signOut();
+            window.location.href = "index.html";
+        } else {
+            alert("Failed to delete account: " + error.message);
+        }
+    }
 }
 
-// 2. Fetch Directory (Delete Button Excluded)
-async function fetchStudentsDirectory() {
-    const tbody = document.getElementById('students-table-body');
-    if (!tbody) return;
+// Clear single-session lock on browser tab close
+window.addEventListener('beforeunload', () => {
+    const role = (currentRole || "").toLowerCase();
+    if (role === "operator" || role === "manager") {
+        const lockKey = role === 'manager' ? 'active_manager' : 'active_operator';
+        sessionLockDoc.set({ [lockKey]: null }, { merge: true });
+    }
+});
 
-    tbody.innerHTML = '';
-    const snap = await db.collection('students').get();
+// ==========================================
+// 4. CPR RECORD MANAGEMENT
+// ==========================================
+async function addStudentCPR() {
+    const cprInput = document.getElementById('cpr-input');
+    if (!cprInput) return;
 
-    snap.forEach(doc => {
-        const d = doc.data();
-        const tr = document.createElement('tr');
+    const cpr = cprInput.value.trim();
 
-        tr.innerHTML = `
-            <td>${d.name || 'N/A'}</td>
-            <td>${d.cprOrPhone || doc.id}</td>
-            <td>${d.tamkeenStatus || 'Under Processing'}</td>
-            <td>${d.comment || ''}</td>
-            <td>${d.addedByEmployee || 'System'}</td>
-            <td>
-                <input type="date" value="${d.startDate || ''}" onchange="setStudentStartDate('${doc.id}', this.value)">
-            </td>
-            <td>${d.expiryDate || 'Not Set'}</td>
-            <td>
-                <button class="primary-btn" onclick="transferStudentPrompt('${doc.id}')">➔ Transfer</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+    if (!/^\d{9}$/.test(cpr)) {
+        alert("CPR must be exactly 9 digits.");
+        return;
+    }
 
-// 3. 12-Month Calendar Expiry & Notification Trigger
-async function setStudentStartDate(studentId, dateVal) {
-    if (!dateVal) return;
+    try {
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+            alert("You must be logged in to add a CPR.");
+            return;
+        }
 
-    const start = new Date(dateVal);
-    const expiry = new Date(start);
-    expiry.setFullYear(expiry.getFullYear() + 1);
+        const accountUsername = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : "User");
+        const currentUid = currentUser.uid;
+        const currentEmail = currentUser.email;
 
-    const currentUser = auth.currentUser;
+        const docRef = db.collection("students").doc(cpr);
+        const docSnap = await docRef.get();
 
-    await db.collection('students').doc(studentId).update({
-        startDate: dateVal,
-        expiryDate: expiry.toISOString().slice(0, 10),
-        assignedEmail: currentUser ? currentUser.email : ''
-    });
+        if (docSnap.exists) {
+            const existingData = docSnap.data();
+            const creatorUid = existingData.createdByUid;
+            const creatorEmail = existingData.createdByEmail || existingData.added_by;
 
-    sendSystemEmail({
-        to_email: currentUser ? currentUser.email : '',
-        subject: "12-Month Program Schedule Updated",
-        body: `Student CPR ${studentId} program completion deadline is ${expiry.toISOString().slice(0, 10)}. Direct reminders scheduled.`
-    });
+            const isMyRecord = (creatorUid && creatorUid === currentUid) || 
+                               (creatorEmail && creatorEmail === currentEmail);
 
-    alert(`12-Month Expiry Date set: ${expiry.toISOString().slice(0, 10)}`);
-    fetchStudentsDirectory();
-}
+            if (isMyRecord) {
+                alert(`This CPR (${cpr}) is already registered by you.`);
+            } else {
+                let username = existingData.createdByName || existingData.username || existingData.name || "mada saleh";
+                alert(`This CPR (${cpr}) is already registered by user: ${username}`);
+            }
+            return;
+        }
 
-// 4. Transfer Student to Class Roster (Arrow Click)
-async function transferStudentPrompt(studentId) {
-    const courseId = prompt("Enter Course ID:");
-    const classId = prompt("Enter Class Batch ID:");
-    if (!courseId || !classId) return;
-
-    const currentUser = auth.currentUser;
-    const employeeUsername = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : "Employee";
-
-    const docSnap = await db.collection('students').doc(studentId).get();
-    if (!docSnap.exists) return;
-
-    const data = docSnap.data();
-
-    await db.collection('courses').doc(courseId)
-            .collection('classes').doc(classId)
-            .collection('students').doc(studentId).set({
-        studentName: data.name || 'N/A',
-        cpr: data.cprOrPhone || studentId,
-        tamkeenStatus: data.tamkeenStatus || 'Under Processing',
-        addedByEmployeeUsername: employeeUsername,
-        transferredAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    alert("Student transferred to class roster.");
-}
-
-// 5. Excel Export Functionality
-function downloadClassRosterToExcel(courseName, className, tableId) {
-    const tbl = document.getElementById(tableId);
-    if (!tbl) return;
-    const wb = XLSX.utils.table_to_book(tbl, { sheet: className });
-    XLSX.writeFile(wb, `${courseName}_${className}_Roster.xlsx`);
-}
-
-// 6. Access Approval & Automatic Chat Sync
-async function acceptUserAccess(userId, userEmail, userName) {
-    await db.collection('users').doc(userId).update({ status: 'Accepted' });
-
-    await db.collection('chat_messages').add({
-        username: "System",
-        message: `🎉 User ${userName} (${userEmail}) has been accepted and added to group chat.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    alert("User accepted and added to chat!");
-}
-
-// 7. Danger Delete Modal Control
-let selectedDeleteUser = null;
-
-function promptDeleteUser(userId, email) {
-    selectedDeleteUser = userId;
-    const modal = document.getElementById('full-page-delete-modal');
-    if (modal) modal.classList.remove('hidden');
-
-    document.getElementById('confirm-delete-btn').onclick = async () => {
-        sendSystemEmail({
-            to_email: email,
-            subject: "Account Termination Notice",
-            body: "Your account has been deleted by the Manager. Future logins will require new registration."
+        await docRef.set({
+            cpr: cpr,
+            studentNumber: cpr,
+            major: "N/A",
+            phone: "N/A",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdByUid: currentUid,
+            createdByEmail: currentEmail,
+            createdByName: accountUsername,
+            added_by: currentEmail
         });
 
-        await db.collection('users').doc(selectedDeleteUser).delete();
-        closeDeleteModal();
-        alert("User permanently removed.");
-        location.reload();
-    };
+        cprInput.value = '';
+        if (document.getElementById('view-cpr-success')) {
+            showView('view-cpr-success');
+        } else {
+            alert("CPR Added Successfully!");
+        }
+
+    } catch (error) {
+        console.error("Error processing CPR addition:", error);
+        alert("Failed to process request: " + error.message);
+    }
 }
 
-function closeDeleteModal() {
-    document.getElementById('full-page-delete-modal')?.classList.add('hidden');
+function resetAndAddAnotherCPR() {
+    const cprInput = document.getElementById('cpr-input');
+    if (cprInput) cprInput.value = '';
+    showView('view-add-cpr');
+    setTimeout(() => { if (cprInput) cprInput.focus(); }, 100);
 }
 
-function sendSystemEmail(params) {
-    console.log("Triggering Email Notification:", params);
-}
+// ==========================================
+// 5. STUDENT DIRECTORY & EXCEL EXPORTS
+// ==========================================
+function listenToStudentDirectory() {
+    if (!currentUserData) return;
+    const currentUid = currentUserData.uid;
+    const activeEmail = currentUserData.email;
+    const activeName = currentUserData.displayName;
 
-function logoutUser() {
-    auth.signOut().then(() => {
-        window.location.href = "index.html";
+    db.collection('students').onSnapshot((snapshot) => {
+        studentList = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            
+            const isMine = (data.createdByUid && data.createdByUid === currentUid) ||
+                           (data.added_by && data.added_by === activeEmail) ||
+                           (data.added_by && data.added_by === activeName) ||
+                           (data.createdByEmail && data.createdByEmail === activeEmail);
+
+            if (isMine) {
+                studentList.push({ id: doc.id, ...data });
+            }
+        });
+
+        renderStudentDirectory(studentList);
+    }, (error) => {
+        console.error("Error fetching student directory:", error);
     });
 }
+
+function handleSearch() {
+    const q = document.getElementById('search-input')?.value.toLowerCase().trim() || "";
+    const filtered = studentList.filter(s => 
+        (s.name && s.name.toLowerCase().includes(q)) || 
+        (s.cpr && s.cpr.includes(q)) ||
+        (s.studentNumber && s.studentNumber.toLowerCase().includes(q)) ||
+        (s.major && s.major.toLowerCase().includes(q))
+    );
+    renderStudentDirectory(filtered);
+}
+
+function downloadAllStudentsData() {
+    if (studentList.length === 0) {
+        alert("No student data available to download.");
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert("Excel export library is loading, please try again in a second.");
+        return;
+    }
+
+    const studentsRows = studentList.map(s => {
+        const courseNames = Array.isArray(s.courses) ? s.courses.map(c => c.name).join(', ') : 'None';
+        return {
+            "Full Name": s.name || '',
+            "Student Number": s.studentNumber || '',
+            "Major": s.major || '',
+            "CPR": s.cpr || '',
+            "Gender": s.gender || '',
+            "Email": s.email || '',
+            "Enrolled Courses": courseNames,
+            "CV Status": s.cvUrl ? 'Uploaded' : 'No CV',
+            "Added By": s.added_by || s.createdByName || ''
+        };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const wsStudents = XLSX.utils.json_to_sheet(studentsRows);
+    XLSX.utils.book_append_sheet(wb, wsStudents, "All Students");
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `All_Students_Data_${todayStr}.xlsx`);
+}
+
+function renderStudentDirectory(list) {
+    const container = document.getElementById('student-container');
+    if (!container) return;
+    container.innerHTML = "";
+
+    const t = translations[currentLang] || translations.en;
+
+    if (list.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:#a0aec0; padding:20px;">${t.lbl_no_students}</p>`;
+        return;
+    }
+
+    list.forEach((student) => {
+        const item = document.createElement('div');
+        item.className = "student-item";
+
+        let coursesHTML = "";
+        if (student.courses && Array.isArray(student.courses) && student.courses.length > 0) {
+            coursesHTML = student.courses.map((c, index) => `
+                <li style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border: 1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.88rem;">
+                    <div>
+                        <strong style="color: #2d3748;">${escapeHTML(c.name)}</strong> 
+                        <span style="color:#718096; margin-left:8px; font-size:0.80rem;">(${c.addedAt})</span>
+                    </div>
+                    <button type="button" onclick="removeCourse('${student.id}', ${index})" 
+                        style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px;">
+                        ${t.btn_delete_course}
+                    </button>
+                </li>
+            `).join("");
+        } else {
+            coursesHTML = `<p style="font-size:0.82rem; color:#a0aec0; margin-top:4px;">${t.lbl_no_courses}</p>`;
+        }
+
+        const cvDisplay = student.cvUrl 
+            ? `<div style="display: flex; align-items: center; gap: 8px;">
+                <a href="${student.cvUrl}" download="${student.cvName || 'Student_CV'}" target="_blank" style="color:#2b6cb0; font-weight:600; text-decoration:underline; font-size:0.85rem;">${t.btn_view_cv}</a>
+                <button type="button" onclick="deleteStudentCV('${student.id}')" 
+                    style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; cursor: pointer; font-size: 0.75rem; padding: 4px 10px; border-radius: 100px;">
+                    ${t.btn_delete_cv}
+                </button>
+               </div>`
+            : `<span style="color:#a0aec0; font-size:0.85rem;">${t.lbl_no_cv}</span>`;
+
+        item.innerHTML = `
+            <div class="student-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                <span>${escapeHTML(student.name || 'Unnamed Student')} (${escapeHTML(student.cpr)})</span>
+            </div>
+            <div class="student-details hidden">
+                <div class="student-actions-wrapper" style="display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 12px;">
+                    <button class="delete-icon-btn" onclick="deleteStudent('${student.id}')">${t.btn_delete_student}</button>
+                </div>
+                
+                <div class="grid-form">
+                    <label>${t.lbl_full_name} 
+                        <input type="text" value="${escapeHTML(student.name || '')}" onchange="updateStudentField('${student.id}', 'name', this.value)">
+                    </label>
+                    <label>${t.lbl_cpr} 
+                        <input type="text" value="${escapeHTML(student.cpr)}" readonly>
+                    </label>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <h4>${t.lbl_cv_doc}</h4>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="cv-input-${student.id}" accept=".pdf,.doc,.docx">
+                        <button type="button" class="primary-btn" onclick="uploadStudentCV('${student.id}')">${t.btn_upload_cv}</button>
+                        <div>${cvDisplay}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <h4>${t.lbl_enrolled_courses}</h4>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="course-input-${student.id}" placeholder="${t.ph_course}">
+                        <button type="button" class="primary-btn" onclick="addCourseToStudent('${student.id}')">${t.btn_add_course}</button>
+                    </div>
+                    <ul>${coursesHTML}</ul>
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+async function updateStudentField(id, field, value) {
+    await db.collection('students').doc(id).update({ [field]: value });
+}
+
+async function deleteStudent(id) {
+    if (confirm("Delete this student entry?")) {
+        await db.collection('students').doc(id).delete();
+    }
+}
+
+// ==========================================
+// 6. COURSE MANAGEMENT
+// ==========================================
+async function addCourseToStudent(studentId) {
+    const inputEl = document.getElementById(`course-input-${studentId}`);
+    if (!inputEl) return;
+
+    const courseName = inputEl.value.trim();
+    if (!courseName) return alert("Please enter a course name.");
+
+    const now = new Date();
+    const formattedDateTime = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ", " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    try {
+        const studentRef = db.collection('students').doc(studentId);
+        const docSnap = await studentRef.get();
+        if (!docSnap.exists) return;
+
+        let currentCourses = Array.isArray(docSnap.data().courses) ? docSnap.data().courses : [];
+        currentCourses.push({ name: courseName, addedAt: formattedDateTime });
+
+        await studentRef.update({ courses: currentCourses });
+        inputEl.value = "";
+    } catch (err) {
+        console.error("Error adding course:", err);
+    }
+}
+
+async function removeCourse(studentId, courseIndex) {
+    if (!confirm("Are you sure you want to delete this course?")) return;
+    try {
+        const studentRef = db.collection('students').doc(studentId);
+        const docSnap = await studentRef.get();
+        if (docSnap.exists) {
+            let existingCourses = Array.isArray(docSnap.data().courses) ? docSnap.data().courses : [];
+            existingCourses.splice(courseIndex, 1);
+            await studentRef.update({ courses: existingCourses });
+        }
+    } catch (err) {
+        console.error("Error removing course:", err);
+    }
+}
+
+// ==========================================
+// 7. CV UPLOAD & DELETE (Firebase Storage)
+// ==========================================
+async function uploadStudentCV(studentId) {
+    const fileInput = document.getElementById(`cv-input-${studentId}`);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a file first!");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const storageRef = storage.ref(`cv_documents/${studentId}_${file.name}`);
+
+    try {
+        const snapshot = await storageRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+
+        await db.collection('students').doc(studentId).update({
+            cvUrl: downloadURL,
+            cvName: file.name
+        });
+        alert("CV uploaded and saved successfully!");
+    } catch (err) {
+        console.error("CV Upload Error:", err);
+        alert("Failed to upload CV: " + err.message);
+    }
+}
+
+async function deleteStudentCV(studentId) {
+    if (!confirm("Are you sure you want to delete this CV?")) return;
+    try {
+        await db.collection('students').doc(studentId).update({
+            cvUrl: firebase.firestore.FieldValue.delete(),
+            cvName: firebase.firestore.FieldValue.delete()
+        });
+        alert("CV deleted successfully!");
+    } catch (err) {
+        console.error("Error deleting CV:", err);
+    }
+}
+
+// ==========================================
+// 8. REAL-TIME GROUP CHAT & UTILITIES
+// ==========================================
+function listenToGroupChat() {
+    db.collection('chat_messages').orderBy('timestamp', 'asc').limitToLast(50).onSnapshot((snapshot) => {
+        const box = document.getElementById('chat-messages');
+        if (!box) return;
+        box.innerHTML = "";
+
+        snapshot.forEach(doc => {
+            const m = doc.data();
+            const div = document.createElement('div');
+            const isMe = m.uid === (currentUserData ? currentUserData.uid : null);
+            div.className = `chat-msg ${isMe ? 'my-msg' : 'other-msg'}`;
+            div.innerHTML = `<strong class="msg-sender">${escapeHTML(m.username || "Anonymous")}</strong>: ${escapeHTML(m.message || "")}`;
+            box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+    });
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    if (!input || !input.value.trim()) return;
+
+    const user = currentUserData || auth.currentUser;
+    if (!user) return alert("Please sign in to send messages.");
+
+    try {
+        const messageText = input.value.trim();
+        input.value = "";
+        await db.collection('chat_messages').add({
+            uid: user.uid,
+            username: user.displayName || user.email.split('@')[0],
+            message: messageText,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (err) {
+        console.error("Failed to send message:", err);
+    }
+}
+
+function escapeHTML(str) {
+    return String(str || "").replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+function showView(id) {
+    const target = document.getElementById(id);
+    if (target) {
+        document.querySelectorAll('.card-view').forEach(v => v.classList.add('hidden'));
+        target.classList.remove('hidden');
+    }
+}
+
+function runLiveFooterClock() {
+    const el = document.getElementById('live-footer-datetime');
+    if (el) {
+        setInterval(() => {
+            const now = new Date();
+            el.innerText = now.toLocaleDateString(currentLang === 'ar' ? 'ar-BH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + " | " + now.toLocaleTimeString();
+        }, 1000);
+    }
+}
+
+// ==========================================
+// 9. SAVE USER ACCOUNT DETAILS
+// ==========================================
+async function saveAccountDetails(event) {
+    if (event) event.preventDefault();
+
+    const user = auth.currentUser;
+    if (!user) {
+        alert("No active user session found.");
+        return;
+    }
+
+    // Capture values from form fields or existing UI elements
+    const updatedName = document.getElementById('acc-name')?.value.trim() || currentUserData.displayName;
+    const updatedPhone = document.getElementById('acc-phone')?.value.trim() || "";
+
+    try {
+        // Save/merge details into the 'users' Firestore collection
+        await db.collection("users").doc(user.uid).set({
+            name: updatedName,
+            phone: updatedPhone,
+            role: currentRole || "Operator",
+            email: user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Update display elements in the modal interface
+        const nameEl = document.getElementById('modal-username');
+        if (nameEl) nameEl.innerText = updatedName;
+
+        alert(currentLang === 'ar' ? 'تم حفظ بيانات الحساب بنجاح!' : 'Account details saved successfully!');
+    } catch (error) {
+        console.error("Error saving account details:", error);
+        alert("Failed to save account details: " + error.message);
+    }
+}
+
+// Bind to window object for HTML access
+window.saveAccountDetails = saveAccountDetails;
+
+// Global scope window binding
+window.signInRoleWithGoogle = signInRoleWithGoogle;
+window.signInWithGoogle = signInWithGoogle;
+window.logoutUser = logoutUser;
+window.deleteAccount = deleteAccount;
+window.addStudentCPR = addStudentCPR;
+window.handleSearch = handleSearch;
+window.downloadAllStudentsData = downloadAllStudentsData;
+window.updateStudentField = updateStudentField;
+window.deleteStudent = deleteStudent;
+window.addCourseToStudent = addCourseToStudent;
+window.removeCourse = removeCourse;
+window.uploadStudentCV = uploadStudentCV;
+window.deleteStudentCV = deleteStudentCV;
+window.sendChatMessage = sendChatMessage;
+window.toggleLanguage = toggleLanguage;
+window.showView = showView;
+
+window.addEventListener('DOMContentLoaded', () => {
+    runLiveFooterClock();
+    applyLanguageTranslations();
+});
