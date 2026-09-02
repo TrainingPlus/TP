@@ -67,6 +67,20 @@
 
     .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
 
+    .logout-btn {
+      background-color: var(--danger-red);
+      color: white;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity 0.2s ease;
+    }
+
+    .logout-btn:hover { opacity: 0.85; }
+
     /* Main Container & Cards */
     main { flex: 1; width: 100%; }
 
@@ -204,6 +218,7 @@
       <button class="nav-btn" onclick="showView('add-course-view')" id="nav-add-course">Add Course</button>
       <button class="nav-btn" onclick="showView('account-view')" id="nav-account">Operator Account</button>
       <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR / EN</button>
+      <button class="logout-btn" onclick="handleLogout()" id="nav-logout">Logout</button>
     </div>
   </header>
 
@@ -342,8 +357,8 @@
   </footer>
 
   <script>
-    // Global Application State
-    let state = {
+    // Global Application State (Loaded from localStorage if available)
+    let state = JSON.parse(localStorage.getItem('portalData')) || {
       accountDetails: {
         name: "Admin Operator",
         phone: "+973 36000000",
@@ -356,6 +371,10 @@
       currentLang: 'EN'
     };
 
+    function saveData() {
+      localStorage.setItem('portalData', JSON.stringify(state));
+    }
+
     const translations = {
       EN: {
         appTitle: "Student Directory & Operator Portal",
@@ -363,6 +382,7 @@
         navCourses: "Courses & Classes",
         navAddCourse: "Add Course",
         navAccount: "Operator Account",
+        navLogout: "Logout",
         stdDirectory: "Student Directory",
         addCourseTitle: "Add New Course",
         lblCourseName: "Course Name",
@@ -402,6 +422,7 @@
         navCourses: "الدورات والفصول",
         navAddCourse: "إضافة دورة",
         navAccount: "حساب المشغل",
+        navLogout: "تسجيل الخروج",
         stdDirectory: "دليل الطلاب",
         addCourseTitle: "إضافة دورة جديدة",
         lblCourseName: "اسم الدورة",
@@ -444,6 +465,11 @@
 
     function toggleLanguage() {
       state.currentLang = state.currentLang === 'EN' ? 'AR' : 'EN';
+      saveData();
+      applyLanguage();
+    }
+
+    function applyLanguage() {
       const dict = translations[state.currentLang];
       document.body.dir = state.currentLang === 'AR' ? 'rtl' : 'ltr';
 
@@ -452,6 +478,7 @@
       document.getElementById('nav-courses').innerText = dict.navCourses;
       document.getElementById('nav-add-course').innerText = dict.navAddCourse;
       document.getElementById('nav-account').innerText = dict.navAccount;
+      document.getElementById('nav-logout').innerText = dict.navLogout;
 
       document.getElementById('txt-std-directory').innerText = dict.stdDirectory;
       document.getElementById('btn-export-excel').innerText = dict.btnExportExcel;
@@ -499,6 +526,7 @@
       const comment = document.getElementById('std-comment').value;
 
       state.allStudents.push({ name, cpr, status, comment });
+      saveData();
       document.getElementById('add-student-form').reset();
       renderStudents();
     }
@@ -522,6 +550,7 @@
       e.preventDefault();
       const input = document.getElementById('course-name');
       state.courses.push({ name: input.value, classes: [] });
+      saveData();
       input.value = '';
       renderCourses();
       showView('courses-view');
@@ -551,6 +580,7 @@
       e.preventDefault();
       const input = document.getElementById('class-name');
       state.courses[state.selectedCourseIndex].classes.push({ name: input.value });
+      saveData();
       input.value = '';
       renderClasses();
     }
@@ -572,6 +602,7 @@
       state.accountDetails.name = document.getElementById('acc-name').value;
       state.accountDetails.phone = document.getElementById('acc-phone').value;
       state.accountDetails.role = document.getElementById('acc-role').value;
+      saveData();
       alert(state.currentLang === 'AR' ? 'تم تحديث بيانات الحساب!' : 'Account details updated!');
     }
 
@@ -579,6 +610,21 @@
       const table = document.getElementById('students-table');
       const workbook = XLSX.utils.table_to_book(table, { sheet: "Students" });
       XLSX.writeFile(workbook, "student_directory.xlsx");
+    }
+
+    function handleLogout() {
+      if (confirm(state.currentLang === 'AR' ? 'هل أنت تأكد من تسجيل الخروج؟' : 'Are you sure you want to log out?')) {
+        // Sign out from Firebase if initialized
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+          firebase.auth().signOut().then(() => {
+            window.location.href = 'login.html';
+          }).catch(() => {
+            window.location.href = 'login.html';
+          });
+        } else {
+          window.location.href = 'login.html';
+        }
+      }
     }
 
     function updateDateTime() {
@@ -597,6 +643,17 @@
         targetEl.innerText = `${gregorianDate} | ${hijriDate} | ${timeString}`;
       }
     }
+
+    // Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('acc-name').value = state.accountDetails.name || '';
+      document.getElementById('acc-phone').value = state.accountDetails.phone || '';
+      document.getElementById('acc-role').value = state.accountDetails.role || 'System Administrator';
+
+      applyLanguage();
+      renderStudents();
+      renderCourses();
+    });
 
     setInterval(updateDateTime, 1000);
     updateDateTime();
