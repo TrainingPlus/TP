@@ -1,175 +1,605 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Plus Institute</title>
-    <link rel="stylesheet" href="style.css">
-    <a href="operator.html" class="nav-link"></a>
-    
-    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Directory & Operator Portal</title>
 
-    <!-- SheetJS for Excel Exports -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase v8 SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- SheetJS Library for Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f2f7f5;
+      --card-bg: #ffffff;
+      --text-primary: #2d3748;
+      --text-muted: #718096;
+      --border-color: #e2e8f0;
+      --accent-mint: #a8e6cf;
+      --accent-mint-dark: #81c784;
+      --accent-slate-blue: #709fb0;
+      --danger-red: #e57373;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      padding-bottom: 70px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header & Navigation */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--accent-slate-blue);
+      padding: 12px 24px;
+      color: white;
+    }
+
+    .nav-controls { display: flex; gap: 8px; }
+
+    .nav-btn {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 7px 14px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
+
+    /* Main Container & Cards */
+    main { flex: 1; width: 100%; }
+
+    .card-view {
+      max-width: 850px;
+      margin: 30px auto;
+      background: var(--card-bg);
+      padding: 28px;
+      border-radius: 16px;
+      border: 1px solid #e8f0ec;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Forms & Inputs */
+    .standard-form { display: flex; flex-direction: column; gap: 16px; }
+    .standard-form label, .grid-form label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.88rem;
+      gap: 4px;
+      font-weight: 600;
+    }
+
+    .standard-form input, .grid-form input, .grid-form select {
+      padding: 10px 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+
+    .standard-form input:focus, .grid-form input:focus, .grid-form select:focus {
+      border-color: var(--accent-slate-blue);
+    }
+
+    .primary-btn {
+      background-color: var(--accent-mint);
+      color: #2c5244;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .primary-btn:hover { background-color: var(--accent-mint-dark); color: white; }
+
+    .secondary-btn {
+      background-color: #edf2f0;
+      color: var(--text-muted);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .secondary-btn:hover {
+      background-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    /* Grid Display */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 1rem;
+    }
+
+    .grid-item {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e1ebe6;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .grid-item:hover {
+      border-color: var(--accent-slate-blue);
+      color: var(--accent-slate-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(112, 159, 176, 0.15);
+    }
+
+    .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+    /* Student Directory Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card-bg);
+      margin-top: 1rem;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th { background-color: #f4f9f7; font-weight: 600; }
+
+    /* RTL Support */
+    body[dir="rtl"] { direction: rtl; text-align: right; }
+    body[dir="rtl"] th, body[dir="rtl"] td { text-align: right; }
+
+    /* Footer */
+    .bottom-footer {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background-color: #1a202c; color: #a0aec0; text-align: center;
+      padding: 8px; font-size: 0.82rem; z-index: 900;
+    }
+  </style>
 </head>
 <body>
-    <header class="top-nav">
-        <div class="nav-left">
-            <div class="search-container hidden" id="search-box">
-                <input type="text" id="search-input" data-i18n-placeholder="search_placeholder" placeholder="Search by name or CPR..." oninput="handleSearch()">
-            </div>
-        </div>
-        <div class="nav-controls">
-            <!-- Language Toggle Button -->
-            <button id="lang-toggle-btn" class="nav-btn" onclick="toggleLanguage()">AR / EN</button>
-            <button id="download-all-btn" class="nav-btn hidden" data-i18n="download_all" onclick="downloadAllStudentsData()">Download All (Excel)</button>
-            <button id="account-btn" class="nav-btn hidden" data-i18n="account" onclick="openAccountModal()">Account</button>
-            <button id="logout-btn" class="nav-btn logout-btn hidden" data-i18n="logout" onclick="logoutUser()">Logout</button>
-        </div>
-    </header>
 
-    <main>
-
-        <!-- Auth View (Role Selector & Dynamic Sign In) -->
-        <section id="view-auth" class="card-view" style="max-width: 440px; margin: 40px auto; text-align: center; padding: 32px 24px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-            <h2 style="color: #2b6cb0; margin-bottom: 8px;" data-i18n="welcome_title">Welcome</h2>
-            <p style="color: #718096; margin-bottom: 24px; font-size: 0.9rem;" data-i18n="welcome_subtitle">Select your role to sign in to the Student Directory</p>
-
-            <!-- Role Selection Options -->
-            <div style="display: flex; gap: 8px; margin-bottom: 24px; justify-content: center;">
-                <button type="button" id="role-btn-manager" onclick="selectRole('manager')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Manager</button>
-                <button type="button" id="role-btn-operator" onclick="selectRole('operator')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Operator</button>
-                <button type="button" id="role-btn-employee" onclick="selectRole('employee')" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer; transition: all 0.2s;">Employee</button>
-            </div>
-
-            <!-- Dynamic Form Area -->
-            <div id="auth-form-container" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background: #f8fafc;">
-                
-                <!-- Prompt when no role is clicked yet -->
-                <div id="role-prompt" style="color: #64748b; font-size: 0.9rem; padding: 10px 0;">
-                    Please select a role above to continue.
-                </div>
-
-                <!-- Manager Google Sign In -->
-                <div id="form-manager" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Manager Sign In</h3>
-                    <button type="button" onclick="signInRoleWithGoogle('manager')" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                        </svg>
-                        <span>Sign in as Manager</span>
-                    </button>
-                </div>
-
-                <!-- Operator Google Sign In -->
-                <div id="form-operator" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Operator Sign In</h3>
-                    <button type="button" onclick="signInRoleWithGoogle('operator')" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                        </svg>
-                        <span>Sign in as Operator</span>
-                    </button>
-                </div>
-
-                <!-- Employee Google Sign In -->
-                <div id="form-employee" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 style="margin-bottom: 4px; color: #1e293b; font-size: 1rem;">Employee Sign In</h3>
-                    <button type="button" id="btn-google-auth" onclick="signInWithGoogle()" 
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;"
-                        onmouseover="this.style.background='#f1f5f9'" 
-                        onmouseout="this.style.background='#ffffff'"
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                        </svg>
-                        <span data-i18n="btn_google">Sign in with Google</span>
-                    </button>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- Home / Directory View -->
-        <section id="view-home" class="card-view hidden">
-            <div class="dashboard-header">
-                <h2 data-i18n="student_directory">Student Directory</h2>
-                <button class="primary-btn" data-i18n="add_new_cpr" onclick="showView('view-add-cpr')">+ Add New CPR</button>
-            </div>
-            <div id="student-container" class="student-list"></div>
-        </section>
-
-        <!-- CPR Entry View -->
-        <section id="view-add-cpr" class="card-view hidden">
-            <h2 data-i18n="register_cpr">Register New CPR</h2>
-            <p class="subtitle" data-i18n="register_cpr_subtitle">Enter a 9-digit CPR number to add a student.</p>
-            <form id="cpr-form" class="standard-form" onsubmit="addStudentCPR(); return false;">
-                <label>
-                    <span data-i18n="cpr_label">CPR Number (9 Digits):</span>
-                    <input type="text" id="cpr-input" maxlength="9" required placeholder="e.g. 980123456">
-                </label>
-                <div class="button-group">
-                    <button type="submit" class="primary-btn" id="add-student-btn" data-i18n="btn_submit">Submit Record</button>
-                    <button type="button" class="secondary-btn" data-i18n="btn_back" onclick="showView('view-home')">Done / Back</button>
-                </div>
-            </form>
-        </section>
-
-        <!-- CPR Success View -->
-        <section id="view-cpr-success" class="card-view hidden">
-            <div class="success-box">
-                <div class="check-icon">✓</div>
-                <h2 data-i18n="cpr_success_title">CPR Added Successfully!</h2>
-                <p class="subtitle" data-i18n="cpr_success_subtitle">Would you like to add another student CPR record?</p>
-                <div class="button-group center-btn">
-                    <button type="button" class="primary-btn" data-i18n="btn_add_another" onclick="resetAndAddAnotherCPR()">+ Add Another CPR</button>
-                    <button type="button" class="secondary-btn" data-i18n="btn_go_directory" onclick="showView('view-home')">Go to Directory</button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Account Details Modal -->
-    <div id="account-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
-            <h3 style="color: var(--accent-slate-blue, #2b6cb0); margin-bottom: 12px;" data-i18n="modal_account_title">User Account</h3>
-            <p><strong data-i18n="lbl_user_id">User ID:</strong> <span id="modal-userid">--</span></p>
-            <p><strong data-i18n="lbl_username">Username:</strong> <span id="modal-username">--</span></p>
-            <p><strong data-i18n="lbl_email">Email:</strong> <span id="modal-email">--</span></p>
-            <p style="margin-bottom: 16px;"><strong>Role:</strong> <span id="modal-role">--</span></p>
-
-            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" onclick="deleteAccount()" style="background: #fff5f5; border: 1px solid #feb2b2; color: #e53e3e; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Delete Account</button>
-                <button type="button" onclick="closeAccountModal()" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem;">Close</button>
-            </div>
-        </div>
+  <!-- Top Navigation Header -->
+  <header class="top-nav">
+    <h2 id="txt-app-title" style="font-size: 1.25rem; font-weight: 600;">Student Directory & Operator Portal</h2>
+    <div class="nav-controls">
+      <button class="nav-btn" onclick="showView('directory-view')" id="nav-directory">Directory</button>
+      <button class="nav-btn" onclick="showView('courses-view')" id="nav-courses">Courses & Classes</button>
+      <button class="nav-btn" onclick="showView('add-course-view')" id="nav-add-course">Add Course</button>
+      <button class="nav-btn" onclick="showView('account-view')" id="nav-account">Operator Account</button>
+      <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR / EN</button>
     </div>
-    <footer class="bottom-footer">
-        <p id="live-footer-datetime">Loading date & time...</p>
-    </footer>
+  </header>
 
-    <script src="script.js"></script>
+  <!-- Main Application Body -->
+  <main>
+
+    <!-- 1. Student Directory View -->
+    <section id="directory-view" class="card-view view active">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 id="txt-std-directory">Student Directory</h3>
+        <button onclick="exportToExcel()" class="primary-btn" id="btn-export-excel">Download Excel</button>
+      </div>
+
+      <!-- Add Student Form -->
+      <div style="background: #f8faf9; padding: 16px; border-radius: 12px; border: 1px solid #e1ebe6; margin-bottom: 20px;">
+        <h4 id="txt-add-std-title" style="margin-bottom: 12px;">Add Student Record</h4>
+        <form id="add-student-form" class="grid-form" onsubmit="addStudent(event)">
+          <label id="lbl-std-name">
+            Student Name
+            <input type="text" id="std-name" required>
+          </label>
+          <label id="lbl-std-cpr">
+            Student CPR
+            <input type="text" id="std-cpr" maxlength="9" pattern="\d{9}" placeholder="9-digit CPR" required>
+          </label>
+          <label id="lbl-std-status">
+            Tamkeen Status
+            <select id="std-status">
+              <option value="Accepted" id="opt-st-acc">Accepted</option>
+              <option value="Under Processing" id="opt-st-proc">Under Processing</option>
+              <option value="Withdrawn" id="opt-st-with">Withdrawn</option>
+            </select>
+          </label>
+          <label id="lbl-std-comment">
+            Comment
+            <input type="text" id="std-comment">
+          </label>
+          <div style="grid-column: 1 / -1; display: flex; align-items: flex-end;">
+            <button type="submit" class="primary-btn" id="btn-add-student">Add Student</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Directory Table -->
+      <table id="students-table">
+        <thead>
+          <tr>
+            <th id="th-std-name">Student Name</th>
+            <th id="th-std-cpr">Student CPR</th>
+            <th id="th-std-status">Tamkeen Status</th>
+            <th id="th-std-comment">Comment</th>
+          </tr>
+        </thead>
+        <tbody id="students-table-body">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 2. Courses View -->
+    <section id="courses-view" class="card-view view">
+      <h3 id="txt-available-courses" style="margin-bottom: 16px;">Available Courses</h3>
+      <div id="courses-list" class="grid"></div>
+    </section>
+
+    <!-- 3. Add Course View -->
+    <section id="add-course-view" class="card-view view">
+      <h3 id="txt-add-course-title" style="margin-bottom: 16px;">Add New Course</h3>
+      <form id="add-course-form" class="standard-form" onsubmit="addCourse(event)">
+        <label id="lbl-course-name" for="course-name">
+          Course Name
+          <input type="text" id="course-name" required placeholder="e.g., Web Development">
+        </label>
+        <div>
+          <button type="submit" class="primary-btn" id="btn-add-course">Add Course</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 4. Classes View -->
+    <section id="classes-view" class="card-view view">
+      <button class="secondary-btn" onclick="showView('courses-view')" id="btn-back-courses" style="margin-bottom: 1rem;">&larr; Back to Courses</button>
+      <h3 id="current-course-title" style="margin-bottom: 16px;">Classes</h3>
+
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <h4 id="txt-add-class-title" style="margin-bottom: 12px;">Add New Class</h4>
+        <form id="add-class-form" class="standard-form" onsubmit="addClass(event)">
+          <label id="lbl-class-name" for="class-name">
+            Class Name / Code
+            <input type="text" id="class-name" required placeholder="e.g., Class A - Morning">
+          </label>
+          <div>
+            <button type="submit" class="primary-btn" id="btn-add-class">Add Class</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="classes-list" class="grid" style="margin-top: 20px;"></div>
+    </section>
+
+    <!-- 5. Operator Account View -->
+    <section id="account-view" class="card-view view">
+      <h3 id="txt-account-settings" style="margin-bottom: 16px;">Operator Account Settings</h3>
+      <form id="account-form" class="standard-form" onsubmit="saveAccountDetails(event)">
+        <label id="lbl-acc-email" for="acc-email">
+          Signed-In Email (Default / Locked)
+          <input type="email" id="acc-email" value="operator@institute.com" disabled>
+        </label>
+        <label id="lbl-acc-name" for="acc-name">
+          Operator Name
+          <input type="text" id="acc-name" placeholder="Enter full name" required>
+        </label>
+        <label id="lbl-acc-phone" for="acc-phone">
+          Phone Number
+          <input type="text" id="acc-phone" placeholder="Enter phone number">
+        </label>
+        <label id="lbl-acc-role" for="acc-role">
+          Role / Department
+          <select id="acc-role">
+            <option value="System Administrator" id="opt-role-admin">System Administrator</option>
+            <option value="Operator" id="opt-role-op">Operator</option>
+            <option value="Course Coordinator" id="opt-role-coord">Course Coordinator</option>
+          </select>
+        </label>
+        <div>
+          <button type="submit" class="primary-btn" id="btn-save-acc">Save Changes</button>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- Live Footer -->
+  <footer class="bottom-footer">
+    <p id="live-footer-datetime">Loading date & time...</p>
+  </footer>
+
+  <script>
+    // Global Application State
+    let state = {
+      accountDetails: {
+        name: "Admin Operator",
+        phone: "+973 36000000",
+        role: "System Administrator"
+      },
+      courses: [],
+      allStudents: [],
+      selectedCourseIndex: null,
+      selectedClassIndex: null,
+      currentLang: 'EN'
+    };
+
+    const translations = {
+      EN: {
+        appTitle: "Student Directory & Operator Portal",
+        navDirectory: "Directory",
+        navCourses: "Courses & Classes",
+        navAddCourse: "Add Course",
+        navAccount: "Operator Account",
+        stdDirectory: "Student Directory",
+        addCourseTitle: "Add New Course",
+        lblCourseName: "Course Name",
+        btnAddCourse: "Add Course",
+        availableCourses: "Available Courses",
+        accountSettings: "Operator Account Settings",
+        lblAccEmail: "Signed-In Email (Default / Locked)",
+        lblAccName: "Operator Name",
+        lblAccPhone: "Phone Number",
+        lblAccRole: "Role / Department",
+        optAdmin: "System Administrator",
+        optOperator: "Operator",
+        optCoord: "Course Coordinator",
+        btnSaveAcc: "Save Changes",
+        btnBackCourses: "← Back to Courses",
+        addClassTitle: "Add New Class",
+        lblClassName: "Class Name / Code",
+        btnAddClass: "Add Class",
+        btnExportExcel: "Download Excel",
+        addStdTitle: "Add Student Record",
+        lblStdName: "Student Name",
+        lblStdCpr: "Student CPR",
+        lblStdStatus: "Tamkeen Status",
+        lblStdComment: "Comment",
+        optAccepted: "Accepted",
+        optProcessing: "Under Processing",
+        optWithdrawn: "Withdrawn",
+        btnAddStudent: "Add Student",
+        thName: "Student Name",
+        thCpr: "Student CPR",
+        thStatus: "Tamkeen Status",
+        thComment: "Comment"
+      },
+      AR: {
+        appTitle: "دليل الطلاب وبوابة المشغل",
+        navDirectory: "دليل الطلاب",
+        navCourses: "الدورات والفصول",
+        navAddCourse: "إضافة دورة",
+        navAccount: "حساب المشغل",
+        stdDirectory: "دليل الطلاب",
+        addCourseTitle: "إضافة دورة جديدة",
+        lblCourseName: "اسم الدورة",
+        btnAddCourse: "إضافة دورة",
+        availableCourses: "الدورات المتاحة",
+        accountSettings: "إعدادات حساب المشغل",
+        lblAccEmail: "البريد الإلكتروني المسجل (مغلق)",
+        lblAccName: "اسم المشغل",
+        lblAccPhone: "رقم الهاتف",
+        lblAccRole: "الدور / القسم",
+        optAdmin: "مدير النظام",
+        optOperator: "مشغل",
+        optCoord: "منسق دورات",
+        btnSaveAcc: "حفظ التغييرات",
+        btnBackCourses: "الرجوع إلى الدورات →",
+        addClassTitle: "إضافة فصل جديد",
+        lblClassName: "اسم / رمز الفصل",
+        btnAddClass: "إضافة فصل",
+        btnExportExcel: "تنزيل ملف إكسل",
+        addStdTitle: "إضافة سجل طالب",
+        lblStdName: "اسم الطالب",
+        lblStdCpr: "الرقم الشخصي (CPR)",
+        lblStdStatus: "حالة تمكين",
+        lblStdComment: "ملاحظات",
+        optAccepted: "مقبول",
+        optProcessing: "قيد المعالجة",
+        optWithdrawn: "منسحب",
+        btnAddStudent: "إضافة طالب",
+        thName: "اسم الطالب",
+        thCpr: "الرقم الشخصي (CPR)",
+        thStatus: "حالة تمكين",
+        thComment: "ملاحظات"
+      }
+    };
+
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
+    function toggleLanguage() {
+      state.currentLang = state.currentLang === 'EN' ? 'AR' : 'EN';
+      const dict = translations[state.currentLang];
+      document.body.dir = state.currentLang === 'AR' ? 'rtl' : 'ltr';
+
+      document.getElementById('txt-app-title').innerText = dict.appTitle;
+      document.getElementById('nav-directory').innerText = dict.navDirectory;
+      document.getElementById('nav-courses').innerText = dict.navCourses;
+      document.getElementById('nav-add-course').innerText = dict.navAddCourse;
+      document.getElementById('nav-account').innerText = dict.navAccount;
+
+      document.getElementById('txt-std-directory').innerText = dict.stdDirectory;
+      document.getElementById('btn-export-excel').innerText = dict.btnExportExcel;
+      document.getElementById('txt-add-std-title').innerText = dict.addStdTitle;
+
+      document.getElementById('lbl-std-name').childNodes[0].nodeValue = dict.lblStdName + " ";
+      document.getElementById('lbl-std-cpr').childNodes[0].nodeValue = dict.lblStdCpr + " ";
+      document.getElementById('lbl-std-status').childNodes[0].nodeValue = dict.lblStdStatus + " ";
+      document.getElementById('lbl-std-comment').childNodes[0].nodeValue = dict.lblStdComment + " ";
+
+      document.getElementById('opt-st-acc').innerText = dict.optAccepted;
+      document.getElementById('opt-st-proc').innerText = dict.optProcessing;
+      document.getElementById('opt-st-with').innerText = dict.optWithdrawn;
+      document.getElementById('btn-add-student').innerText = dict.btnAddStudent;
+
+      document.getElementById('th-std-name').innerText = dict.thName;
+      document.getElementById('th-std-cpr').innerText = dict.thCpr;
+      document.getElementById('th-std-status').innerText = dict.thStatus;
+      document.getElementById('th-std-comment').innerText = dict.thComment;
+
+      document.getElementById('txt-add-course-title').innerText = dict.addCourseTitle;
+      document.getElementById('lbl-course-name').childNodes[0].nodeValue = dict.lblCourseName + " ";
+      document.getElementById('btn-add-course').innerText = dict.btnAddCourse;
+      document.getElementById('txt-available-courses').innerText = dict.availableCourses;
+
+      document.getElementById('btn-back-courses').innerText = dict.btnBackCourses;
+      document.getElementById('txt-add-class-title').innerText = dict.addClassTitle;
+      document.getElementById('lbl-class-name').childNodes[0].nodeValue = dict.lblClassName + " ";
+      document.getElementById('btn-add-class').innerText = dict.btnAddClass;
+
+      document.getElementById('txt-account-settings').innerText = dict.accountSettings;
+      document.getElementById('lbl-acc-email').childNodes[0].nodeValue = dict.lblAccEmail + " ";
+      document.getElementById('lbl-acc-name').childNodes[0].nodeValue = dict.lblAccName + " ";
+      document.getElementById('lbl-acc-phone').childNodes[0].nodeValue = dict.lblAccPhone + " ";
+      document.getElementById('lbl-acc-role').childNodes[0].nodeValue = dict.lblAccRole + " ";
+
+      updateDateTime();
+    }
+
+    function addStudent(e) {
+      e.preventDefault();
+      const name = document.getElementById('std-name').value;
+      const cpr = document.getElementById('std-cpr').value;
+      const status = document.getElementById('std-status').value;
+      const comment = document.getElementById('std-comment').value;
+
+      state.allStudents.push({ name, cpr, status, comment });
+      document.getElementById('add-student-form').reset();
+      renderStudents();
+    }
+
+    function renderStudents() {
+      const tbody = document.getElementById('students-table-body');
+      tbody.innerHTML = '';
+      state.allStudents.forEach(std => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${std.name}</td>
+          <td>${std.cpr}</td>
+          <td>${std.status}</td>
+          <td>${std.comment}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addCourse(e) {
+      e.preventDefault();
+      const input = document.getElementById('course-name');
+      state.courses.push({ name: input.value, classes: [] });
+      input.value = '';
+      renderCourses();
+      showView('courses-view');
+    }
+
+    function renderCourses() {
+      const container = document.getElementById('courses-list');
+      container.innerHTML = '';
+      state.courses.forEach((course, index) => {
+        const div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerText = course.name;
+        div.onclick = () => openCourse(index);
+        container.appendChild(div);
+      });
+    }
+
+    function openCourse(index) {
+      state.selectedCourseIndex = index;
+      const prefix = state.currentLang === 'AR' ? 'الفصول لـ ' : 'Classes for ';
+      document.getElementById('current-course-title').innerText = `${prefix}${state.courses[index].name}`;
+      renderClasses();
+      showView('classes-view');
+    }
+
+    function addClass(e) {
+      e.preventDefault();
+      const input = document.getElementById('class-name');
+      state.courses[state.selectedCourseIndex].classes.push({ name: input.value });
+      input.value = '';
+      renderClasses();
+    }
+
+    function renderClasses() {
+      const container = document.getElementById('classes-list');
+      container.innerHTML = '';
+      const currentClasses = state.courses[state.selectedCourseIndex].classes;
+      currentClasses.forEach((cls) => {
+        const div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerText = cls.name;
+        container.appendChild(div);
+      });
+    }
+
+    function saveAccountDetails(e) {
+      e.preventDefault();
+      state.accountDetails.name = document.getElementById('acc-name').value;
+      state.accountDetails.phone = document.getElementById('acc-phone').value;
+      state.accountDetails.role = document.getElementById('acc-role').value;
+      alert(state.currentLang === 'AR' ? 'تم تحديث بيانات الحساب!' : 'Account details updated!');
+    }
+
+    function exportToExcel() {
+      const table = document.getElementById('students-table');
+      const workbook = XLSX.utils.table_to_book(table, { sheet: "Students" });
+      XLSX.writeFile(workbook, "student_directory.xlsx");
+    }
+
+    function updateDateTime() {
+      const now = new Date();
+      const locale = state.currentLang === 'AR' ? 'ar-BH' : 'en-US';
+
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+      const gregorianDate = now.toLocaleDateString(locale, dateOptions);
+      const timeString = now.toLocaleTimeString(locale, timeOptions);
+      const hijriDate = new Intl.DateTimeFormat(locale + '-u-ca-islamic', dateOptions).format(now);
+
+      const targetEl = document.getElementById('live-footer-datetime');
+      if (targetEl) {
+        targetEl.innerText = `${gregorianDate} | ${hijriDate} | ${timeString}`;
+      }
+    }
+
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+  </script>
 </body>
 </html>
