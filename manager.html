@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manager Dashboard</title>
+  <link rel="stylesheet" href="style.css">
    <!-- Firebase SDKs (v9/v10 Compatibility Mode) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -259,23 +260,10 @@
 </head>
 <body>
 
-  <!-- ================= TOP NAVIGATION ================= -->
-  <header class="top-nav">
-    <div class="nav-left">
-      <h2>Manager Console</h2>
-    </div>
-    <div class="nav-controls">
-      <button class="nav-btn" onclick="switchView('home-view')">Home</button>
-      <button class="nav-btn" onclick="switchView('employees-view')">
-        Employees
-        <span id="pending-badge" class="badge">1</span>
-      </button>
-      <button class="nav-btn" onclick="switchView('students-view')">Students</button>
-      <button class="nav-btn" onclick="switchView('courses-view')">Courses</button>
-      <button class="nav-btn" id="lang-btn" onclick="toggleLanguage()">AR / EN</button>
-      <button class="nav-btn logout-btn" onclick="alert('Account settings')">Account</button>
-    </div>
-  </header>
+  <!-- ================= TOP NAVIGATION =================
+       Shared header: rendered by renderSharedHeader() in script.js.
+       Identical markup source used on index.html, manager.html and operator.html. -->
+  <header class="top-nav" id="shared-header-mount"></header>
 
   <!-- ================= 1. HOME VIEW ================= -->
   <main id="home-view" class="card-view">
@@ -395,12 +383,13 @@
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="bottom-footer">
-        <p id="live-footer-datetime">Loading date & time...</p>
-    </footer>
+  <!-- Footer: rendered by renderSharedFooter() in script.js -->
+  <footer class="bottom-footer" id="shared-footer-mount"></footer>
 
-  <!-- ================= JAVASCRIPT ================= -->
+  <!-- Shared config, auth, and header/footer renderer (single source of truth) -->
+  <script src="script.js"></script>
+
+  <!-- ================= PAGE-SPECIFIC JAVASCRIPT ================= -->
   <script>
     // --- Data Store ---
     let state = {
@@ -441,13 +430,17 @@
       render();
     }
 
+    // Note: the AR/EN button itself lives in the shared header (script.js).
+    // This page-local toggle just flips the demo dashboard's own labels/direction.
     function toggleLanguage() {
       state.lang = state.lang === 'en' ? 'ar' : 'en';
       document.body.setAttribute('dir', state.lang === 'ar' ? 'rtl' : 'ltr');
-      document.getElementById('lang-btn').innerText = state.lang === 'ar' ? 'EN / العربية' : 'AR / EN';
     }
 
     // --- Action Handlers ---
+    // NOTE: this demo approve/reject still uses local mock data. Phase 2 wires
+    // this to the real `users` collection (status: pending/approved/rejected)
+    // that the shared header's pending-badge already listens to.
     function handleApproval(accepted) {
       if (accepted) {
         state.employees.push({ id: Date.now().toString(), name: 'Sara Ahmed', email: 'sara@example.com' });
@@ -456,7 +449,7 @@
         alert('Employee rejected.');
       }
       document.getElementById('approval-banner').style.display = 'none';
-      document.getElementById('pending-badge').style.display = 'none';
+      document.getElementById('pending-badge')?.classList.add('hidden');
       render();
     }
 
@@ -626,7 +619,16 @@
 
     // Initial render
     render();
+
+    // Support deep-linking from the shared header, e.g. manager.html#employees-view
+    function switchToHashView() {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && document.getElementById(hash)) {
+        switchView(hash);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', switchToHashView);
+    window.addEventListener('hashchange', switchToHashView);
   </script>
-  <script src="script.js"></script>
 </body>
 </html>
