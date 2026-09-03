@@ -69,6 +69,25 @@ body {
 .nav-btn:hover { background-color: rgba(255, 255, 255, 0.35); }
 .logout-btn:hover { background-color: var(--danger-red); }
 
+/* Shared header badge (pending approvals, unread counts, etc.) */
+.nav-btn { position: relative; }
+.badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--danger-red);
+    color: white;
+    font-size: 0.68rem;
+    border-radius: 50%;
+    width: 17px;
+    height: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 1px solid var(--card-bg);
+}
+
 /* Main Card Containers */
 .card-view {
     max-width: 800px;
