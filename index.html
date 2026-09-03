@@ -166,6 +166,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Group Chat Floating Widget -->
+    <div id="chat-widget">
+        <button class="chat-fab" onclick="toggleChatWindow()">
+            💬
+            <span id="chat-unread-badge" class="hidden">0</span>
+        </button>
+        
+        <div id="chat-window" class="chat-box hidden">
+            <div class="chat-header">
+                <span data-i18n="chat_header">Team Group Chat</span>
+                <span style="cursor:pointer;" onclick="toggleChatWindow()">&times;</span>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <!-- Emoji Picker Popup Container -->
+            <div id="emoji-picker" class="emoji-picker-container hidden">
+                <span>😀</span><span>😂</span><span>😍</span><span>👍</span><span>❤️</span>
+                <span>🔥</span><span>🎉</span><span>👏</span><span>🙏</span><span>✨</span>
+                <span>😊</span><span>😎</span><span>🙌</span><span>💯</span><span>🚀</span>
+            </div>
+
+            <!-- Chat Input Row -->
+            <div class="chat-input-row">
+                <button type="button" class="emoji-toggle-btn" onclick="toggleEmojiPicker()">😊</button>
+                <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Type a message...">
+                <button type="button" class="primary-btn" data-i18n="btn_send" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    
     <footer class="bottom-footer">
         <p id="live-footer-datetime">Loading date & time...</p>
     </footer>
