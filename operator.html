@@ -204,18 +204,9 @@
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="top-nav">
-    <div class="nav-left">
-      <h2 id="txt-app-title" style="font-size: 1.25rem; font-weight: 600;">Operator Portal</h2>
-    </div>
-    <div class="nav-controls">
-      <button class="nav-btn" onclick="showView('home-view')" id="nav-home">Home</button>
-      <button class="nav-btn" onclick="showView('courses-view')" id="nav-courses">Courses</button>
-      <button class="nav-btn" onclick="toggleLanguage()" id="lang-btn">AR / EN</button>
-      <button class="nav-btn" onclick="showView('account-view')" id="nav-account">Account</button>
-    </div>
-  </header>
+  <!-- Header: rendered by renderSharedHeader() in script.js.
+       Identical markup source used on index.html, manager.html and operator.html. -->
+  <header class="top-nav" id="shared-header-mount"></header>
 
   <!-- Main Content -->
   <main>
@@ -345,10 +336,11 @@
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer class="bottom-footer">
-    <p id="live-footer-datetime">Loading date & time...</p>
-  </footer>
+  <!-- Footer: rendered by renderSharedFooter() in script.js -->
+  <footer class="bottom-footer" id="shared-footer-mount"></footer>
+
+  <!-- Shared config, auth, and header/footer renderer (single source of truth) -->
+  <script src="script.js"></script>
 
   <script>
     // State Data Structure
@@ -469,10 +461,7 @@
       document.body.dir = lang === 'AR' ? 'rtl' : 'ltr';
 
       // Update UI Text Elements
-      document.getElementById('txt-app-title').innerText = dict.appTitle;
-      document.getElementById('nav-home').innerText = dict.navHome;
-      document.getElementById('nav-courses').innerText = dict.navCourses;
-      document.getElementById('nav-account').innerText = dict.navAccount;
+      // (App title / nav links now live in the shared header — see script.js)
       document.getElementById('txt-add-course-title').innerText = dict.addCourseTitle;
       
       // Form labels
@@ -623,29 +612,10 @@
       XLSX.writeFile(workbook, "student_records.xlsx");
     }
 
-    // Displays full Date (Gregorian & Hijri) with Time in Footer
-    function updateDateTime() {
-      const now = new Date();
-      const locale = state.currentLang === 'AR' ? 'ar-BH' : 'en-US';
-
-      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
-
-      const gregorianDate = now.toLocaleDateString(locale, dateOptions);
-      const timeString = now.toLocaleTimeString(locale, timeOptions);
-
-      // Formatted Hijri date string
-      const hijriDate = new Intl.DateTimeFormat(locale + '-u-ca-islamic', dateOptions).format(now);
-
-      const targetEl = document.getElementById('live-footer-datetime');
-      if (targetEl) {
-        targetEl.innerText = `${gregorianDate} | ${hijriDate} | ${timeString}`;
-      }
-    }
+    // Date/time footer is now handled by the shared renderSharedFooter()/runLiveFooterClock()
+    // in script.js — same clock logic on every page, one place to change it.
 
     initAccountDetails();
-    setInterval(updateDateTime, 1000);
-    updateDateTime();
   </script>
 </body>
 </html>
