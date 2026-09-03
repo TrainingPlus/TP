@@ -159,14 +159,90 @@ auth.onAuthStateChanged((user) => {
         currentUserData = user;
         currentRole = sessionStorage.getItem("userRole") || "Operator";
         updateUserUI(true);
+        renderSharedHeader();
         listenToStudentDirectory();
         listenToGroupChat();
+        listenToPendingApprovals();
     } else {
         currentUserData = null;
         currentRole = null;
         updateUserUI(false);
+        renderSharedHeader();
     }
 });
+
+// ==========================================
+// 1B. SHARED HEADER & FOOTER (single source of truth)
+// ==========================================
+// Every page (index.html, manager.html, operator.html) mounts these into
+// <header id="shared-header-mount"></header> and <footer id="shared-footer-mount"></footer>.
+// Editing this function is the ONLY place you need to change the header/footer —
+// it updates on every page automatically.
+function renderSharedHeader() {
+    const headerMount = document.getElementById('shared-header-mount');
+    if (!headerMount) return;
+
+    const role = currentRole || sessionStorage.getItem('userRole') || null;
+    const loggedIn = !!(currentUserData || auth.currentUser);
+
+    // Role-aware nav links. Every page gets the same set of links; the current
+    // page's own link is simply where you already are.
+    let roleLinks = '';
+    if (role === 'Manager') {
+        roleLinks = `
+            <button class="nav-btn" onclick="location.href='manager.html'">Dashboard</button>
+            <button class="nav-btn" onclick="location.href='manager.html#employees-view'">
+                Employees<span id="pending-badge" class="badge hidden">0</span>
+            </button>
+            <button class="nav-btn" onclick="location.href='manager.html#courses-view'">Courses</button>
+            <button class="nav-btn" onclick="location.href='index.html'">Student Directory</button>`;
+    } else if (role === 'Operator') {
+        roleLinks = `
+            <button class="nav-btn" onclick="location.href='operator.html'">Courses</button>
+            <button class="nav-btn" onclick="location.href='index.html'">Student Directory</button>`;
+    } else if (role === 'Employee') {
+        roleLinks = `<button class="nav-btn" onclick="location.href='index.html'">Student Directory</button>`;
+    }
+
+    headerMount.innerHTML = `
+        <div class="nav-left">
+            <h2 class="app-title" style="font-size:1.15rem; font-weight:700; white-space:nowrap;">Training Plus Institute</h2>
+            <div class="search-container ${loggedIn && (role === 'Employee' || role === 'Manager' || role === 'Operator') ? '' : 'hidden'}" id="search-box">
+                <input type="text" id="search-input" data-i18n-placeholder="search_placeholder" placeholder="Search by name or CPR..." oninput="handleSearch && handleSearch()">
+            </div>
+        </div>
+        <div class="nav-controls">
+            ${loggedIn ? roleLinks : ''}
+            <button id="lang-toggle-btn" class="nav-btn" onclick="toggleLanguage()">AR / EN</button>
+            <button id="download-all-btn" class="nav-btn ${loggedIn && role !== 'Operator' ? '' : 'hidden'}" data-i18n="download_all" onclick="downloadAllStudentsData && downloadAllStudentsData()">Download All (Excel)</button>
+            <button id="account-btn" class="nav-btn ${loggedIn ? '' : 'hidden'}" data-i18n="account" onclick="openAccountModal ? openAccountModal() : alert('Account')">Account</button>
+            <button id="logout-btn" class="nav-btn logout-btn ${loggedIn ? '' : 'hidden'}" data-i18n="logout" onclick="logoutUser()">Logout</button>
+        </div>
+    `;
+
+    applyLanguageTranslations();
+}
+
+function renderSharedFooter() {
+    const footerMount = document.getElementById('shared-footer-mount');
+    if (!footerMount) return;
+    footerMount.innerHTML = `<p id="live-footer-datetime">Loading date &amp; time...</p>`;
+    runLiveFooterClock();
+}
+
+// Placeholder wired up fully in Phase 2 (employee approval workflow).
+// Keeps the manager's "pending approvals" badge count in sync in the shared header.
+function listenToPendingApprovals() {
+    const role = currentRole || sessionStorage.getItem('userRole');
+    if (role !== 'Manager') return;
+    db.collection('users').where('status', '==', 'pending').onSnapshot((snapshot) => {
+        const badge = document.getElementById('pending-badge');
+        if (!badge) return;
+        const count = snapshot.size;
+        badge.innerText = count;
+        badge.classList.toggle('hidden', count === 0);
+    }, (err) => console.error('Pending approvals listener error:', err));
+}
 
 // ==========================================
 // 3. ROLE SELECTION & AUTHENTICATION
@@ -262,8 +338,9 @@ async function signInWithGoogle() {
 
         sessionStorage.setItem("userRole", "Employee");
         currentRole = "Employee";
-        if (!window.location.pathname.includes("employee.html")) {
-            window.location.href = "employee.html";
+        // Employees use the Student Directory (index.html) itself — no separate page.
+        if (!window.location.pathname.includes("index.html") && window.location.pathname !== "/") {
+            window.location.href = "index.html";
         }
     } catch (error) {
         console.error("Google Sign-In Error:", error);
@@ -760,14 +837,28 @@ function showView(id) {
     }
 }
 
+let footerClockInterval = null;
 function runLiveFooterClock() {
     const el = document.getElementById('live-footer-datetime');
-    if (el) {
-        setInterval(() => {
-            const now = new Date();
-            el.innerText = now.toLocaleDateString(currentLang === 'ar' ? 'ar-BH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + " | " + now.toLocaleTimeString();
-        }, 1000);
-    }
+    if (!el) return;
+
+    if (footerClockInterval) clearInterval(footerClockInterval);
+
+    const tick = () => {
+        const now = new Date();
+        const locale = currentLang === 'ar' ? 'ar-BH' : 'en-US';
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+        const gregorianDate = now.toLocaleDateString(locale, dateOptions);
+        const hijriDate = new Intl.DateTimeFormat(locale + '-u-ca-islamic', dateOptions).format(now);
+        const timeString = now.toLocaleTimeString(locale, timeOptions);
+
+        el.innerText = `${gregorianDate} | ${hijriDate} | ${timeString}`;
+    };
+
+    tick();
+    footerClockInterval = setInterval(tick, 1000);
 }
 
 // ==========================================
@@ -829,6 +920,10 @@ window.toggleLanguage = toggleLanguage;
 window.showView = showView;
 
 window.addEventListener('DOMContentLoaded', () => {
-    runLiveFooterClock();
+    renderSharedHeader();
+    renderSharedFooter();
     applyLanguageTranslations();
 });
+
+window.renderSharedHeader = renderSharedHeader;
+window.renderSharedFooter = renderSharedFooter;
