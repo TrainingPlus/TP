@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <p class="muted" id="breadcrumb"><a href="/manager/courses.html">← Courses</a></p>
+        <h1 id="class-title">Class</h1>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead>
+            <tr><th data-i18n="name">Name</th><th data-i18n="cpr">CPR</th><th data-i18n="tamkeen_status">Tamkeen status</th><th data-i18n="added_by">Sent by</th><th data-i18n="comment">Comment</th></tr>
+          </thead>
+          <tbody id="students-body"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { t } from "/js/i18n.js";
+import { doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const params = new URLSearchParams(location.search);
+const courseId = params.get("course");
+const classId = params.get("class");
+if (!courseId || !classId) window.location.href = "/manager/courses.html";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/courses.html");
+  renderFooter();
+  initChat(profile, user.uid);
+
+  const courseSnap = await getDoc(doc(db, "courses", courseId));
+  const classSnap = await getDoc(doc(db, "courses", courseId, "classes", classId));
+  document.getElementById("class-title").textContent = classSnap.data()?.name || "Class";
+  document.getElementById("breadcrumb").innerHTML = `<a href="/manager/courses.html">Courses</a> / <a href="/manager/course-view.html?id=${courseId}">${courseSnap.data()?.name || ""}</a>`;
+
+  const tbody = document.getElementById("students-body");
+  const snap = await getDocs(collection(db, "courses", courseId, "classes", classId, "students"));
+  if (snap.empty){ tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No students in this class yet.</td></tr>`; return; }
+  tbody.innerHTML = "";
+  const statusLabel = { processing: t("status_processing"), accepted: t("status_accepted"), withdrawn: t("status_withdrawn") };
+  snap.forEach(d => {
+    const s = d.data();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${s.name || ""}</td><td>${s.cpr || "-"}</td><td>${statusLabel[s.tamkeenStatus] || "-"}</td><td>${s.sentByName || "-"}</td><td>${s.comment || "-"}</td>`;
+    tbody.appendChild(tr);
+  });
+});
+</script>
+</body>
+</html>

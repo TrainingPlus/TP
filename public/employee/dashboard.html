@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="add_student">Add student</h1>
+        <p>Enter a CPR number or phone number to start a new file, or find an existing one below.</p>
+      </div>
+    </div>
+
+    <div class="panel" style="max-width:520px;">
+      <div class="panel-body">
+        <div class="field">
+          <label data-i18n="cpr">CPR / Phone number</label>
+          <input type="text" id="quick-identifier" placeholder="e.g. 950101234 or 33123456">
+        </div>
+        <button class="btn btn-primary" id="quick-add-btn" data-i18n="add_student">Add student</button>
+      </div>
+    </div>
+
+    <div class="panel mt-16" id="directory">
+      <div class="panel-head">
+        <h2 data-i18n="nav_directory">Student Directory</h2>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="name">Name</th>
+              <th data-i18n="cpr">CPR</th>
+              <th data-i18n="phone">Phone</th>
+              <th data-i18n="tamkeen_status">Tamkeen status</th>
+              <th data-i18n="added_by">Added by</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="directory-body">
+            <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { t } from "/js/i18n.js";
+import { exportToExcel } from "/js/export.js";
+import {
+  collection, addDoc, getDocs, query, where, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+guardPage("employee", async (user, profile) => {
+  renderHeader("employee", profile, "/employee/dashboard.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  loadDirectory();
+
+  document.getElementById("export-directory-btn").addEventListener("click", async () => {
+    const snap = await getDocs(collection(db, "students"));
+    const rows = [];
+    snap.forEach(d => {
+      const s = d.data();
+      rows.push({
+        Name: s.name || "", CPR: s.cpr || "", Phone: s.phone || "",
+        Degree: s.degree || "", "Tamkeen Status": s.tamkeenStatus || "",
+        "Added By": s.addedByName || "", Comment: s.comment || ""
+      });
+    });
+    exportToExcel(rows, "student-directory.xlsx", "Directory");
+  });
+
+  document.getElementById("quick-add-btn").addEventListener("click", async () => {
+    const val = document.getElementById("quick-identifier").value.trim();
+    if (!val){ toast("Enter a CPR or phone number first.", "error"); return; }
+
+    const studentsRef = collection(db, "students");
+    const byCpr = await getDocs(query(studentsRef, where("cpr", "==", val)));
+    const byPhone = await getDocs(query(studentsRef, where("phone", "==", val)));
+
+    if (!byCpr.empty || !byPhone.empty){
+      const existing = (!byCpr.empty ? byCpr.docs[0] : byPhone.docs[0]).data();
+      toast(t("already_added", { name: existing.addedByName || "unknown" }), "error");
+      return;
+    }
+
+    const isPhoneLike = /^\d{7,8}$/.test(val); // Bahrain-style local phone length as a light heuristic
+    const newDoc = {
+      name: "",
+      cpr: isPhoneLike ? "" : val,
+      phone: isPhoneLike ? val : "",
+      degree: "", tamkeenStatus: "processing", comment: "",
+      cvURL: "", cvName: "", trackingStartDate: "",
+      classAssignments: [],
+      addedBy: user.uid, addedByName: profile.name,
+      createdAt: serverTimestamp()
+    };
+    const ref = await addDoc(studentsRef, newDoc);
+    toast(t("added_success"), "success");
+    setTimeout(() => { window.location.href = `/employee/student.html?id=${ref.id}`; }, 900);
+  });
+});
+
+async function loadDirectory(){
+  const tbody = document.getElementById("directory-body");
+  const snap = await getDocs(collection(db, "students"));
+  if (snap.empty){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No students yet. Add your first one above.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = "";
+  snap.forEach(d => {
+    const s = d.data();
+    const tr = document.createElement("tr");
+    tr.draggable = true;
+    tr.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("application/json", JSON.stringify({ id: d.id, ...s }));
+    });
+    tr.innerHTML = `
+      <td>${s.name || "<span class=muted>Untitled</span>"}</td>
+      <td>${s.cpr || "-"}</td>
+      <td>${s.phone || "-"}</td>
+      <td>${statusBadge(s.tamkeenStatus)}</td>
+      <td>${s.addedByName || "-"}</td>
+      <td><button class="btn btn-sm export-one" data-id="${d.id}">⭳ xlsx</button></td>`;
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest(".export-one")) return;
+      window.location.href = `/employee/student.html?id=${d.id}`;
+    });
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll(".export-one").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const snap2 = await getDocs(query(collection(db, "students"), where("__name__", "==", btn.dataset.id)));
+      snap2.forEach(d => {
+        const s = d.data();
+        exportToExcel([{
+          Name: s.name || "", CPR: s.cpr || "", Phone: s.phone || "", Degree: s.degree || "",
+          "Tamkeen Status": s.tamkeenStatus || "", Comment: s.comment || "", "Added By": s.addedByName || ""
+        }], `${s.name || "student"}.xlsx`, "Student");
+      });
+    });
+  });
+}
+
+function statusBadge(status){
+  const map = {
+    accepted: `<span class="badge badge-accepted">${t("status_accepted")}</span>`,
+    processing: `<span class="badge badge-processing">${t("status_processing")}</span>`,
+    withdrawn: `<span class="badge badge-withdrawn">${t("status_withdrawn")}</span>`,
+  };
+  return map[status] || `<span class="badge badge-pending">-</span>`;
+}
+</script>
+</body>
+</html>

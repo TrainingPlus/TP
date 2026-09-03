@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isActive() { return signedIn() && myProfile().status == 'active'; }
+    function myRole() { return myProfile().role; }
+    function isManager()  { return isActive() && myRole() == 'manager'; }
+    function isOperator() { return isActive() && myRole() == 'operator'; }
+    function isEmployee() { return isActive() && myRole() == 'employee'; }
+
+    // ---------------- users ----------------
+    match /users/{uid} {
+      allow read: if signedIn();
+      // a user may only create their OWN profile doc, always starting unapproved
+      allow create: if signedIn() && request.auth.uid == uid
+                    && request.resource.data.status in ['pending', 'active'];
+      // role/status changes happen through Cloud Functions (admin SDK, bypasses rules);
+      // this only covers harmless self-edits like photo refresh.
+      allow update: if signedIn() && request.auth.uid == uid
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.status == resource.data.status;
+      allow delete: if isManager();
+    }
+
+    // ---------------- invites (manager pre-authorizes an email) ----------------
+    match /invites/{email} {
+      allow read, write: if isManager();
+    }
+
+    // ---------------- students ----------------
+    match /students/{studentId} {
+      allow read: if isActive();
+      allow create, update: if isEmployee() || isManager();
+      allow delete: if isManager();
+    }
+
+    // ---------------- courses / classes / class-students ----------------
+    match /courses/{courseId} {
+      allow read: if isActive();
+      allow create, update: if isOperator() || isManager();
+      allow delete: if isManager();
+
+      match /classes/{classId} {
+        allow read: if isActive();
+        allow create, update: if isOperator() || isManager();
+        allow delete: if isManager();
+
+        match /students/{studentId} {
+          allow read: if isActive();
+          // employees "send" a student in; operator manages the class
+          allow create: if isEmployee() || isOperator() || isManager();
+          allow update: if isOperator() || isManager();
+          allow delete: if isOperator() || isManager();
+        }
+      }
+    }
+
+    // ---------------- chat ----------------
+    match /chatThreads/{threadId} {
+      allow read: if isActive() && request.auth.uid in resource.data.participants;
+      allow create, update: if isActive() &&
+        (request.resource.data.isGroup == true || request.auth.uid in request.resource.data.participants);
+
+      match /messages/{messageId} {
+        allow read, create: if isActive() &&
+          request.auth.uid in get(/databases/$(database)/documents/chatThreads/$(threadId)).data.participants;
+      }
+    }
+  }
+}

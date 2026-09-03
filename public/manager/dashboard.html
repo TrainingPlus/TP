@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div><h1>Overview</h1><p class="muted">Company-wide snapshot.</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+      <div class="panel panel-body"><div class="muted" style="font-size:12.5px;">Students</div><div style="font-size:26px;font-weight:700;" id="stat-students">–</div></div>
+      <div class="panel panel-body"><div class="muted" style="font-size:12.5px;">Courses</div><div style="font-size:26px;font-weight:700;" id="stat-courses">–</div></div>
+      <div class="panel panel-body"><div class="muted" style="font-size:12.5px;">Active users</div><div style="font-size:26px;font-weight:700;" id="stat-users">–</div></div>
+      <div class="panel panel-body"><div class="muted" style="font-size:12.5px;">Pending approvals</div><div style="font-size:26px;font-weight:700;" id="stat-pending">–</div></div>
+    </div>
+    <div class="panel mt-16" id="pending-panel" style="display:none;">
+      <div class="panel-head"><h2>Waiting for your approval</h2></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+          <tbody id="pending-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db, functions } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/dashboard.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  loadStats();
+});
+
+async function loadStats(){
+  const [studentsSnap, coursesSnap, usersSnap, pendingSnap] = await Promise.all([
+    getDocs(collection(db, "students")),
+    getDocs(collection(db, "courses")),
+    getDocs(query(collection(db, "users"), where("status", "==", "active"))),
+    getDocs(query(collection(db, "users"), where("status", "==", "pending"))),
+  ]);
+  document.getElementById("stat-students").textContent = studentsSnap.size;
+  document.getElementById("stat-courses").textContent = coursesSnap.size;
+  document.getElementById("stat-users").textContent = usersSnap.size;
+  document.getElementById("stat-pending").textContent = pendingSnap.size;
+
+  if (!pendingSnap.empty){
+    document.getElementById("pending-panel").style.display = "block";
+    const tbody = document.getElementById("pending-body");
+    tbody.innerHTML = "";
+    pendingSnap.forEach(d => {
+      const p = d.data();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.name}</td><td>${p.email}</td>
+        <td>
+          <select id="role-${d.id}"><option value="employee">Employee</option><option value="operator">Operator</option></select>
+        </td>
+        <td><button class="btn btn-sm btn-primary" data-uid="${d.id}">Approve</button></td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("button[data-uid]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const role = document.getElementById(`role-${btn.dataset.uid}`).value;
+        const approve = httpsCallable(functions, "approveUser");
+        await approve({ uid: btn.dataset.uid, role });
+        toast("User approved.", "success");
+        loadStats();
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>

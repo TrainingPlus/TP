@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employees — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div><h1 data-i18n="nav_employees">Employees</h1><p class="muted">Everyone with access to the system.</p></div>
+      <button class="btn btn-primary" id="invite-btn" data-i18n="add_employee">Add employee</button>
+    </div>
+
+    <div class="panel" id="pending-panel" style="display:none;margin-bottom:16px;">
+      <div class="panel-head"><h2>Pending approval</h2></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data"><thead><tr><th data-i18n="name">Name</th><th>Email</th><th>Role</th><th></th></tr></thead><tbody id="pending-body"></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Active users</h2></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+          <tbody id="active-body"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<div class="modal-backdrop" id="invite-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="add_employee">Add employee</h3></div>
+    <div class="modal-body">
+      <div class="field"><label>Google email</label><input type="email" id="invite-email" placeholder="name@gmail.com"></div>
+      <div class="field">
+        <label>Role</label>
+        <select id="invite-role"><option value="employee">Employee</option><option value="operator">Operator</option></select>
+      </div>
+      <p class="hint">They'll get full access automatically the moment they sign in with this Google account — no separate email is sent for this step.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="cancel-invite-btn" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-invite-btn" data-i18n="save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db, functions } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast, confirmModal } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { t } from "/js/i18n.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+import {
+  collection, getDocs, query, where, doc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/employees.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  loadAll();
+
+  document.getElementById("invite-btn").addEventListener("click", () => document.getElementById("invite-modal").classList.add("open"));
+  document.getElementById("cancel-invite-btn").addEventListener("click", () => document.getElementById("invite-modal").classList.remove("open"));
+  document.getElementById("confirm-invite-btn").addEventListener("click", async () => {
+    const email = document.getElementById("invite-email").value.trim().toLowerCase();
+    const role = document.getElementById("invite-role").value;
+    if (!email) return;
+    await setDoc(doc(db, "invites", email), { role, invitedBy: profile.name, invitedAt: new Date().toISOString() });
+    document.getElementById("invite-modal").classList.remove("open");
+    document.getElementById("invite-email").value = "";
+    toast("Invite saved. They'll get access on their next Google sign-in.", "success");
+  });
+});
+
+async function loadAll(){
+  const [pendingSnap, activeSnap] = await Promise.all([
+    getDocs(query(collection(db, "users"), where("status", "==", "pending"))),
+    getDocs(query(collection(db, "users"), where("status", "==", "active"))),
+  ]);
+
+  const pendingPanel = document.getElementById("pending-panel");
+  const pendingBody = document.getElementById("pending-body");
+  if (!pendingSnap.empty){
+    pendingPanel.style.display = "block";
+    pendingBody.innerHTML = "";
+    pendingSnap.forEach(d => {
+      const p = d.data();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.name}</td><td>${p.email}</td>
+        <td><select id="role-${d.id}"><option value="employee">Employee</option><option value="operator">Operator</option></select></td>
+        <td><button class="btn btn-sm btn-primary" data-uid="${d.id}">Approve</button></td>`;
+      pendingBody.appendChild(tr);
+    });
+    pendingBody.querySelectorAll("button[data-uid]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const role = document.getElementById(`role-${btn.dataset.uid}`).value;
+        await httpsCallable(functions, "approveUser")({ uid: btn.dataset.uid, role });
+        toast("User approved.", "success");
+        loadAll();
+      });
+    });
+  } else {
+    pendingPanel.style.display = "none";
+  }
+
+  const activeBody = document.getElementById("active-body");
+  const nonManagers = activeSnap.docs.filter(d => d.data().role !== "manager");
+  if (nonManagers.length === 0){
+    activeBody.innerHTML = `<tr class="empty-row"><td colspan="4">No operators or employees yet.</td></tr>`;
+    return;
+  }
+  activeBody.innerHTML = "";
+  nonManagers.forEach(d => {
+    const p = d.data();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.name}</td><td>${p.email}</td><td style="text-transform:capitalize;">${p.role}</td>
+      <td class="flex">
+        <button class="btn btn-sm" data-email-uid="${d.id}" data-name="${p.name}">${t("email_to_user")}</button>
+        <button class="btn btn-sm btn-danger" data-delete-uid="${d.id}">${t("delete")}</button>
+      </td>`;
+    activeBody.appendChild(tr);
+  });
+
+  activeBody.querySelectorAll("[data-email-uid]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      window.location.href = `/manager/employee-email.html?uid=${btn.dataset.emailUid}&name=${encodeURIComponent(btn.dataset.name)}`;
+    });
+  });
+
+  activeBody.querySelectorAll("[data-delete-uid]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const ok = await confirmModal(t("confirm_delete_employee_title"), t("confirm_delete_employee_body"), t("yes_delete"));
+      if (!ok) return;
+      await httpsCallable(functions, "deleteEmployeeCascade")({ uid: btn.dataset.deleteUid });
+      toast("User and their data deleted.", "success");
+      loadAll();
+    });
+  });
+}
+</script>
+</body>
+</html>

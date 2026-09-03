@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <h1 id="student-title">Student</h1>
+        <p class="muted">Fill in the file and save.</p>
+      </div>
+      <div class="flex">
+        <button class="btn" id="export-one-btn" data-i18n="download_excel">Download Excel</button>
+        <button class="btn btn-primary" id="save-btn" data-i18n="save">Save</button>
+      </div>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="panel">
+          <div class="panel-head"><h2>Tracking start date</h2></div>
+          <div class="panel-body">
+            <div id="mini-calendar"></div>
+            <p class="hint" id="cal-hint">Pick the date this student's Tamkeen year starts. Reminder emails go out 11 months after, 1 month before the year ends, and 3 days before it ends.</p>
+          </div>
+        </div>
+
+        <div class="panel mt-16">
+          <div class="panel-head"><h2 data-i18n="classes">Classes</h2></div>
+          <div class="panel-body" id="classes-list" style="padding:12px;">
+            <p class="hint">Loading open classes…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body">
+          <div class="field-row">
+            <div class="field"><label data-i18n="name">Name</label><input id="f-name" type="text"></div>
+            <div class="field"><label data-i18n="degree">Degree</label><input id="f-degree" type="text"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label data-i18n="cpr">CPR</label><input id="f-cpr" type="text"></div>
+            <div class="field"><label data-i18n="phone">Phone number</label><input id="f-phone" type="text"></div>
+          </div>
+          <div class="field">
+            <label data-i18n="tamkeen_status">Tamkeen status</label>
+            <select id="f-status">
+              <option value="processing" data-i18n="status_processing">Under processing</option>
+              <option value="accepted" data-i18n="status_accepted">Accepted</option>
+              <option value="withdrawn" data-i18n="status_withdrawn">Withdrawn</option>
+            </select>
+          </div>
+          <div class="field">
+            <label data-i18n="comment">Comment</label>
+            <textarea id="f-comment" rows="3"></textarea>
+          </div>
+          <div class="field">
+            <label data-i18n="upload_cv">Upload CV</label>
+            <div class="file-drop" id="cv-drop">
+              <span id="cv-drop-label">Click or drag a file here (PDF / Word)</span>
+              <input type="file" id="cv-input" style="display:none" accept=".pdf,.doc,.docx">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db, storage } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { renderMiniCalendar } from "/js/calendar.js";
+import { exportToExcel } from "/js/export.js";
+import { t } from "/js/i18n.js";
+import {
+  doc, getDoc, updateDoc, collectionGroup, getDocs, setDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+const params = new URLSearchParams(location.search);
+const studentId = params.get("id");
+let studentData = null;
+let pendingCvFile = null;
+
+if (!studentId){ window.location.href = "/employee/dashboard.html"; }
+
+guardPage("employee", async (user, profile) => {
+  renderHeader("employee", profile, "/employee/dashboard.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  await loadStudent();
+  await loadOpenClasses(user, profile);
+});
+
+async function loadStudent(){
+  const snap = await getDoc(doc(db, "students", studentId));
+  if (!snap.exists()){ toast("Student not found", "error"); return; }
+  studentData = snap.data();
+
+  document.getElementById("student-title").textContent = studentData.name || "New student";
+  document.getElementById("f-name").value = studentData.name || "";
+  document.getElementById("f-degree").value = studentData.degree || "";
+  document.getElementById("f-cpr").value = studentData.cpr || "";
+  document.getElementById("f-phone").value = studentData.phone || "";
+  document.getElementById("f-status").value = studentData.tamkeenStatus || "processing";
+  document.getElementById("f-comment").value = studentData.comment || "";
+  if (studentData.cvName) document.getElementById("cv-drop-label").textContent = "📎 " + studentData.cvName;
+
+  renderMiniCalendar(document.getElementById("mini-calendar"), studentData.trackingStartDate || null, async (iso) => {
+    studentData.trackingStartDate = iso;
+    await updateDoc(doc(db, "students", studentId), { trackingStartDate: iso });
+    toast("Tracking start date saved. Reminder schedule updated.", "success");
+  });
+}
+
+document.getElementById("cv-drop").addEventListener("click", () => document.getElementById("cv-input").click());
+document.getElementById("cv-input").addEventListener("change", (e) => {
+  pendingCvFile = e.target.files[0];
+  if (pendingCvFile) document.getElementById("cv-drop-label").textContent = "📎 " + pendingCvFile.name;
+});
+document.getElementById("cv-drop").addEventListener("dragover", e => e.preventDefault());
+document.getElementById("cv-drop").addEventListener("drop", e => {
+  e.preventDefault();
+  pendingCvFile = e.dataTransfer.files[0];
+  if (pendingCvFile) document.getElementById("cv-drop-label").textContent = "📎 " + pendingCvFile.name;
+});
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  const patch = {
+    name: document.getElementById("f-name").value.trim(),
+    degree: document.getElementById("f-degree").value.trim(),
+    cpr: document.getElementById("f-cpr").value.trim(),
+    phone: document.getElementById("f-phone").value.trim(),
+    tamkeenStatus: document.getElementById("f-status").value,
+    comment: document.getElementById("f-comment").value.trim(),
+  };
+  if (pendingCvFile){
+    const path = `cv/${studentId}/${pendingCvFile.name}`;
+    const sref = ref(storage, path);
+    await uploadBytes(sref, pendingCvFile);
+    patch.cvURL = await getDownloadURL(sref);
+    patch.cvName = pendingCvFile.name;
+  }
+  await updateDoc(doc(db, "students", studentId), patch);
+  Object.assign(studentData, patch);
+  document.getElementById("student-title").textContent = patch.name || "Student";
+  toast("Saved.", "success");
+});
+
+document.getElementById("export-one-btn").addEventListener("click", () => {
+  exportToExcel([{
+    Name: studentData.name || "", CPR: studentData.cpr || "", Phone: studentData.phone || "",
+    Degree: studentData.degree || "", "Tamkeen Status": studentData.tamkeenStatus || "",
+    Comment: studentData.comment || "", "Added By": studentData.addedByName || ""
+  }], `${studentData.name || "student"}.xlsx`, "Student");
+});
+
+async function loadOpenClasses(user, profile){
+  const host = document.getElementById("classes-list");
+  const snap = await getDocs(collectionGroup(db, "classes"));
+  if (snap.empty){
+    host.innerHTML = `<p class="hint">No classes have been opened yet.</p>`;
+    return;
+  }
+  const sentClassIds = (studentData.classAssignments || []).map(a => a.classId);
+  host.innerHTML = "";
+  snap.forEach(d => {
+    const c = d.data();
+    const row = document.createElement("div");
+    row.className = "flex";
+    row.style.cssText = "justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);";
+    const already = sentClassIds.includes(d.id);
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:600;font-size:13px;">${c.name}</div>
+        <div class="muted" style="font-size:12px;">${c.courseName || ""}</div>
+      </div>
+      <button class="btn btn-sm ${already ? "" : "btn-primary"}" ${already ? "disabled" : ""} data-course="${c.courseId}" data-class="${d.id}" data-classname="${c.name}" data-coursename="${c.courseName || ""}">
+        ${already ? "Sent ✓" : "→"}
+      </button>`;
+    host.appendChild(row);
+    row.querySelector("button").addEventListener("click", async (e) => {
+      if (already) return;
+      const btn = e.currentTarget;
+      await sendStudentToClass(btn.dataset.course, btn.dataset.class, btn.dataset.classname, btn.dataset.coursename, user, profile);
+      btn.textContent = "Sent ✓";
+      btn.disabled = true;
+      btn.classList.remove("btn-primary");
+    });
+  });
+}
+
+async function sendStudentToClass(courseId, classId, className, courseName, user, profile){
+  await setDoc(doc(db, "courses", courseId, "classes", classId, "students", studentId), {
+    name: studentData.name, cpr: studentData.cpr,
+    tamkeenStatus: studentData.tamkeenStatus, comment: studentData.comment,
+    sentBy: user.uid, sentByName: profile.name, sentAt: serverTimestamp()
+  });
+  const assignments = studentData.classAssignments || [];
+  assignments.push({ courseId, classId, className, courseName, sentBy: user.uid, sentByName: profile.name });
+  await updateDoc(doc(db, "students", studentId), { classAssignments: assignments });
+  studentData.classAssignments = assignments;
+  toast(`Sent to ${className}.`, "success");
+}
+</script>
+</body>
+</html>

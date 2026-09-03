@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <p class="muted"><a href="/manager/employees.html">← Employees</a></p>
+        <h1 id="page-title" data-i18n="email_to_user">Email this user</h1>
+      </div>
+    </div>
+    <div class="panel" style="max-width:560px;">
+      <div class="panel-body">
+        <div class="field"><label data-i18n="subject">Subject</label><input type="text" id="subject-input"></div>
+        <div class="field"><label data-i18n="message">Message</label><textarea id="message-input" rows="8"></textarea></div>
+        <button class="btn btn-primary" id="send-btn" data-i18n="send">Send</button>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { functions } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+const params = new URLSearchParams(location.search);
+const toUid = params.get("uid");
+const name = params.get("name") || "";
+if (!toUid) window.location.href = "/manager/employees.html";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/employees.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  document.getElementById("page-title").textContent = `Email ${name}`;
+
+  document.getElementById("send-btn").addEventListener("click", async () => {
+    const subject = document.getElementById("subject-input").value.trim();
+    const message = document.getElementById("message-input").value.trim();
+    if (!subject || !message){ toast("Write a subject and message first.", "error"); return; }
+    await httpsCallable(functions, "sendCustomEmail")({ toUid, subject, message });
+    toast("Email sent.", "success");
+    document.getElementById("subject-input").value = "";
+    document.getElementById("message-input").value = "";
+  });
+});
+</script>
+</body>
+</html>

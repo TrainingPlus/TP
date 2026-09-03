@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <p class="muted"><a href="/manager/courses.html">← Courses</a></p>
+        <h1 id="course-title">Course</h1>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Students</th></tr></thead>
+          <tbody id="classes-body"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const courseId = new URLSearchParams(location.search).get("id");
+if (!courseId) window.location.href = "/manager/courses.html";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/courses.html");
+  renderFooter();
+  initChat(profile, user.uid);
+
+  const courseSnap = await getDoc(doc(db, "courses", courseId));
+  document.getElementById("course-title").textContent = courseSnap.data()?.name || "Course";
+
+  const tbody = document.getElementById("classes-body");
+  const snap = await getDocs(collection(db, "courses", courseId, "classes"));
+  if (snap.empty){ tbody.innerHTML = `<tr class="empty-row"><td colspan="2">No classes yet.</td></tr>`; return; }
+  tbody.innerHTML = "";
+  for (const d of snap.docs){
+    const c = d.data();
+    const studentsSnap = await getDocs(collection(db, "courses", courseId, "classes", d.id, "students"));
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c.name}</td><td>${studentsSnap.size}</td>`;
+    tr.addEventListener("click", () => window.location.href = `/manager/class-view.html?course=${courseId}&class=${d.id}`);
+    tbody.appendChild(tr);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waiting for approval — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="dot" style="background:var(--warn);"></div>
+    <h1>Waiting for approval</h1>
+    <p>The manager has been notified by email and needs to accept your account before you can sign in. This page will refresh automatically once approved.</p>
+    <button class="btn" id="logout-btn">Sign out</button>
+  </div>
+</div>
+<script type="module">
+  import { auth, db } from "/js/firebase-config.js";
+  import { logout } from "/js/auth.js";
+  import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await logout();
+    window.location.href = "/index.html";
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) { window.location.href = "/index.html"; return; }
+    onSnapshot(doc(db, "users", user.uid), (snap) => {
+      const p = snap.data();
+      if (p && p.status === "active") window.location.href = `/${p.role}/dashboard.html`;
+    });
+  });
+</script>
+</body>
+</html>

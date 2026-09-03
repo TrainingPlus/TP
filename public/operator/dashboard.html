@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <h1 data-i18n="add_course">Add course</h1>
+        <p>Open a new course, then add classes inside it.</p>
+      </div>
+    </div>
+
+    <div class="panel" style="max-width:480px;">
+      <div class="panel-body">
+        <div class="field">
+          <label data-i18n="name">Course name</label>
+          <input type="text" id="course-name-input" placeholder="e.g. Digital Marketing Track">
+        </div>
+        <button class="btn btn-primary" id="add-course-btn" data-i18n="add_course">Add course</button>
+      </div>
+    </div>
+
+    <div class="panel mt-16">
+      <div class="panel-head"><h2 data-i18n="nav_courses">Courses</h2></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Classes</th><th>Created</th></tr></thead>
+          <tbody id="courses-body"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import {
+  collection, addDoc, getDocs, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+guardPage("operator", async (user, profile) => {
+  renderHeader("operator", profile, "/operator/dashboard.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  loadCourses();
+
+  document.getElementById("add-course-btn").addEventListener("click", async () => {
+    const name = document.getElementById("course-name-input").value.trim();
+    if (!name){ toast("Enter a course name.", "error"); return; }
+    await addDoc(collection(db, "courses"), {
+      name, createdBy: user.uid, createdByName: profile.name, createdByRole: "operator",
+      createdAt: serverTimestamp()
+    });
+    document.getElementById("course-name-input").value = "";
+    toast("Course added.", "success");
+    loadCourses();
+  });
+});
+
+async function loadCourses(){
+  const tbody = document.getElementById("courses-body");
+  const snap = await getDocs(collection(db, "courses"));
+  if (snap.empty){ tbody.innerHTML = `<tr class="empty-row"><td colspan="3">No courses yet.</td></tr>`; return; }
+  tbody.innerHTML = "";
+  for (const d of snap.docs){
+    const c = d.data();
+    const classesSnap = await getDocs(collection(db, "courses", d.id, "classes"));
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c.name}</td><td>${classesSnap.size}</td><td>${c.createdByName || ""}</td>`;
+    tr.addEventListener("click", () => window.location.href = `/operator/course.html?id=${d.id}`);
+    tbody.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>

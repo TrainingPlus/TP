@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <p class="muted"><a href="/operator/courses.html">← Courses</a></p>
+        <h1 id="course-title">Course</h1>
+      </div>
+      <button class="btn btn-primary" id="add-class-btn" data-i18n="add_class">Add class</button>
+    </div>
+    <div class="panel">
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Students</th></tr></thead>
+          <tbody id="classes-body"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<div class="modal-backdrop" id="add-class-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="add_class">Add class</h3></div>
+    <div class="modal-body">
+      <div class="field"><label data-i18n="name">Class name</label><input type="text" id="class-name-input" placeholder="e.g. Batch 3 — Morning"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="cancel-class-btn" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-class-btn" data-i18n="save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { doc, getDoc, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const courseId = new URLSearchParams(location.search).get("id");
+if (!courseId) window.location.href = "/operator/courses.html";
+let courseName = "";
+
+guardPage("operator", async (user, profile) => {
+  renderHeader("operator", profile, "/operator/courses.html");
+  renderFooter();
+  initChat(profile, user.uid);
+
+  const courseSnap = await getDoc(doc(db, "courses", courseId));
+  courseName = courseSnap.data()?.name || "Course";
+  document.getElementById("course-title").textContent = courseName;
+  document.title = courseName + " — Student System";
+
+  loadClasses();
+
+  document.getElementById("add-class-btn").addEventListener("click", () => document.getElementById("add-class-modal").classList.add("open"));
+  document.getElementById("cancel-class-btn").addEventListener("click", () => document.getElementById("add-class-modal").classList.remove("open"));
+  document.getElementById("confirm-class-btn").addEventListener("click", async () => {
+    const name = document.getElementById("class-name-input").value.trim();
+    if (!name) return;
+    await addDoc(collection(db, "courses", courseId, "classes"), {
+      name, courseId, courseName, createdBy: user.uid, createdByName: profile.name, createdAt: serverTimestamp()
+    });
+    document.getElementById("add-class-modal").classList.remove("open");
+    toast("Class added. Employees have been emailed.", "success");
+    loadClasses();
+  });
+});
+
+async function loadClasses(){
+  const tbody = document.getElementById("classes-body");
+  const snap = await getDocs(collection(db, "courses", courseId, "classes"));
+  if (snap.empty){ tbody.innerHTML = `<tr class="empty-row"><td colspan="2">No classes yet.</td></tr>`; return; }
+  tbody.innerHTML = "";
+  for (const d of snap.docs){
+    const c = d.data();
+    const studentsSnap = await getDocs(collection(db, "courses", courseId, "classes", d.id, "students"));
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c.name}</td><td>${studentsSnap.size}</td>`;
+    tr.addEventListener("click", () => window.location.href = `/operator/class.html?course=${courseId}&class=${d.id}`);
+    tbody.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>

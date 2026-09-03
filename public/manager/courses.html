@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Courses — Student System</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header id="app-header"></header>
+  <main class="content">
+    <div class="page-head">
+      <div><h1 data-i18n="nav_courses">Courses</h1></div>
+      <button class="btn btn-primary" id="add-course-btn" data-i18n="add_course">Add course</button>
+    </div>
+    <div class="panel">
+      <div class="panel-body" style="padding:0;">
+        <table class="data">
+          <thead><tr><th data-i18n="name">Name</th><th>Classes</th><th>Created by</th></tr></thead>
+          <tbody id="courses-body"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+</div>
+<div id="toast-stack"></div>
+
+<div class="modal-backdrop" id="add-course-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n="add_course">Add course</h3></div>
+    <div class="modal-body"><div class="field"><label data-i18n="name">Course name</label><input type="text" id="course-name-input"></div></div>
+    <div class="modal-foot">
+      <button class="btn" id="cancel-course-btn" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" id="confirm-course-btn" data-i18n="save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { guardPage } from "/js/auth.js";
+import { db } from "/js/firebase-config.js";
+import { renderHeader, renderFooter, toast } from "/js/ui.js";
+import { initChat } from "/js/chat.js";
+import { collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+guardPage("manager", async (user, profile) => {
+  renderHeader("manager", profile, "/manager/courses.html");
+  renderFooter();
+  initChat(profile, user.uid);
+  loadCourses();
+
+  document.getElementById("add-course-btn").addEventListener("click", () => document.getElementById("add-course-modal").classList.add("open"));
+  document.getElementById("cancel-course-btn").addEventListener("click", () => document.getElementById("add-course-modal").classList.remove("open"));
+  document.getElementById("confirm-course-btn").addEventListener("click", async () => {
+    const name = document.getElementById("course-name-input").value.trim();
+    if (!name) return;
+    await addDoc(collection(db, "courses"), {
+      name, createdBy: user.uid, createdByName: profile.name, createdByRole: "manager", createdAt: serverTimestamp()
+    });
+    document.getElementById("add-course-modal").classList.remove("open");
+    toast("Course added. The operator has been emailed.", "success");
+    loadCourses();
+  });
+});
+
+async function loadCourses(){
+  const tbody = document.getElementById("courses-body");
+  const snap = await getDocs(collection(db, "courses"));
+  if (snap.empty){ tbody.innerHTML = `<tr class="empty-row"><td colspan="3">No courses yet.</td></tr>`; return; }
+  tbody.innerHTML = "";
+  for (const d of snap.docs){
+    const c = d.data();
+    const classesSnap = await getDocs(collection(db, "courses", d.id, "classes"));
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c.name}</td><td>${classesSnap.size}</td><td>${c.createdByName || ""}</td>`;
+    tr.addEventListener("click", () => window.location.href = `/manager/course-view.html?id=${d.id}`);
+    tbody.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>
